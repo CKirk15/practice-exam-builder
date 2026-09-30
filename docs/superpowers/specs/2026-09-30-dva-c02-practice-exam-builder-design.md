@@ -73,7 +73,7 @@ with a pilot gate (§4.2). yt-dlp warns that YouTube extraction without a JS
 runtime is deprecated. If ingest fails for that reason, install `deno`,
 which yt-dlp uses by default.
 
-**Correction (ingest, 2026-09-30):** only videos 01–02 have chapters. Videos 03–25 have none. Their narration marks each question as "Question N" (global number), so for those videos ingest derives question sections from the first in-order occurrence of each spoken marker (`questionSource: "spoken"`). The extractor then writes `chapterTitle` as a short topic label.
+**Correction (ingest, 2026-09-30):** only videos 01–02 have chapters. Videos 03–25 have none. Their narration marks each question as "Question N" (global number), so for those videos ingest derives question sections from the first in-order occurrence of each spoken marker (`questionSource: "spoken"`). The extractor then writes `chapterTitle` as a short topic label. If spoken markers are garbled (video 21's captions render "Question 401" as "4001", "42", …), a checked-in sources/<nn>-<videoId>/question-starts.json with 20 increasing start seconds supplies the sections (questionSource "manual"). The anchor-window rule still verifies each extracted question against these starts.
 
 ## 3. Architecture
 

@@ -11,7 +11,7 @@ the narrator reads aloud. Faithfulness beats polish: never invent content.
 - `sources/<nn>-<videoId>/transcript.txt`. Lines look like `[h:mm:ss] text`.
   Before each question chapter there is a header line:
   `=== Q07 [0:10:39–0:13:51] Lambda concurrency throttling ===`.
-  `metadata.json` also has `questionSource`. `"chapters"` means the sections come from YouTube chapters and headers carry the chapter title. `"spoken"` means the video has no chapters. The sections were found from the narrator saying "Question N" (the global number), and headers read `=== Q07 [0:10:39–0:13:51] Question 47 ===`.
+  `metadata.json` also has `questionSource`. `"chapters"` means the sections come from YouTube chapters and headers carry the chapter title. `"spoken"` means the video has no chapters. The sections were found from the narrator saying "Question N" (the global number), and headers read `=== Q07 [0:10:39–0:13:51] Question 47 ===`. `"manual"` means the video has no chapters and its captions mangle the spoken numbers. The section starts came from a reviewed `question-starts.json`, and headers read like the `"spoken"` ones. Treat it exactly like `"spoken"`.
 
 The narrator often says "Question seven, …" a second or two **before** the
 chapter header. So the stem's first words may sit just above the header, at the

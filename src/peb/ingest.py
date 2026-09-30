@@ -11,6 +11,7 @@ from peb.transcript import clean_vtt, question_chapters, render_transcript, spok
 MANUAL_LANGS = ["en", "en-US", "en-GB", "en-orig"]
 AUTO_LANGS = ["en-orig", "en", "en-US", "en-GB"]
 FAILED = {"no-captions", "chapter-mismatch", "error"}
+MANUAL_STARTS = "question-starts.json"
 
 
 class YtDlpClient:
@@ -92,19 +93,44 @@ def ingest(client, url: str, sources_dir: Path, force: bool = False,
         folder = sources_dir / f"{item['index']:02d}-{item['videoId']}"
         if item["videoId"] in missing:
             results.append(_result(item, "missing", "no longer in the playlist"))
-        elif (folder / "transcript.txt").exists() and not force:
-            meta = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
-            qchapters_count = len(meta.get("questionChapters", []))
-            if qchapters_count != QUESTIONS_PER_VIDEO:
-                results.append(_result(item, "chapter-mismatch", _chapter_mismatch_detail(qchapters_count)))
-            else:
-                results.append(_result(item, "ok", "skipped (already ingested)"))
+        elif not force and _already_ingested(folder):
+            results.append(_result(item, "ok", "skipped (already ingested)"))
         else:
             if fetched_any:
                 sleep(delay)
             fetched_any = True
             results.append(_ingest_video(client, item, folder))
     return results
+
+
+def _already_ingested(folder: Path) -> bool:
+    if not (folder / "transcript.txt").exists():
+        return False
+    meta = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
+    return len(meta.get("questionChapters", [])) == QUESTIONS_PER_VIDEO
+
+
+class ManualStartsError(ValueError):
+    pass
+
+
+def _manual_chapters(folder: Path, first_n: int, duration: int) -> list[dict] | None:
+    path = folder / MANUAL_STARTS
+    if not path.exists():
+        return None
+    try:
+        starts = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        starts = None
+    valid = (isinstance(starts, list) and len(starts) == QUESTIONS_PER_VIDEO
+             and all(isinstance(s, int) and not isinstance(s, bool) for s in starts)
+             and all(0 <= s < duration for s in starts)
+             and all(a < b for a, b in zip(starts, starts[1:])))
+    if not valid:
+        raise ManualStartsError("question-starts.json must list 20 increasing start seconds within the video")
+    ends = starts[1:] + [duration]
+    return [{"q": i, "startSec": s, "endSec": e, "title": f"Question {first_n + i - 1}"}
+            for i, (s, e) in enumerate(zip(starts, ends), start=1)]
 
 
 def _chapter_mismatch_detail(qchapters_count: int) -> str:
@@ -127,6 +153,10 @@ def _ingest_video(client, item: dict, folder: Path) -> dict:
                 first_n = (item["index"] - 1) * QUESTIONS_PER_VIDEO + 1
                 qchapters = spoken_question_chapters(lines, first_n, QUESTIONS_PER_VIDEO, duration)
                 source = "spoken"
+                if len(qchapters) != QUESTIONS_PER_VIDEO:
+                    manual = _manual_chapters(folder, first_n, duration)
+                    if manual is not None:
+                        qchapters, source = manual, "manual"
         metadata = {**item, "durationSec": duration, "chapters": info["chapters"],
                     "questionSource": source, "questionChapters": qchapters}
         (folder / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")

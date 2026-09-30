@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from fakes import VTT, FakeClient, chapters, entry
 from peb.ingest import FAILED, ingest, merge_manifest, pick_caption_track
 
@@ -105,14 +106,13 @@ def test_ingest_reports_videos_missing_from_playlist(tmp_path):
     assert [(r["videoId"], r["status"]) for r in results] == [(A, "missing"), (B, "ok")]
 
 
-def test_ingest_detects_chapter_mismatch_on_rerun_without_redownload(tmp_path):
-    client = FakeClient([A], infos={A: {"durationSec": 210, "chapters": chapters(19), "subtitles": [], "automatic_captions": ["en"]}})
+def test_rerun_reprocesses_a_previously_mismatched_video(tmp_path):
+    info = {"durationSec": 210, "chapters": chapters(19), "subtitles": [], "automatic_captions": ["en"]}
+    client = FakeClient([A], infos={A: info})
     run(tmp_path, client)
-    assert len(client.downloads) == 1
-    results = run(tmp_path, client)
-    assert results[0]["status"] == "chapter-mismatch"
-    assert "19 question chapters" in results[0]["detail"]
-    assert len(client.downloads) == 1  # No second download
+    result = run(tmp_path, client)[0]
+    assert result["status"] == "chapter-mismatch"
+    assert len(client.downloads) == 2
 
 
 def test_failed_statuses():
@@ -152,3 +152,37 @@ def test_ingest_reports_chapter_mismatch_when_no_chapters_and_no_spoken_markers(
     result = run(tmp_path, FakeClient([A], infos={A: info}))[0]
     assert result["status"] == "chapter-mismatch"
     assert result["detail"] == "0 question chapters (expected 20)"
+
+
+NO_CHAPTERS = {"durationSec": 1300, "chapters": [], "subtitles": [], "automatic_captions": ["en-orig"]}
+
+
+def write_starts(tmp_path, starts):
+    folder = tmp_path / "sources" / f"01-{A}"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "question-starts.json").write_text(json.dumps(starts), encoding="utf-8")
+
+
+def test_ingest_uses_manual_question_starts_when_spoken_detection_fails(tmp_path):
+    write_starts(tmp_path, [60 * m for m in range(1, 21)])
+    result = run(tmp_path, FakeClient([A], infos={A: NO_CHAPTERS}))[0]
+    assert result["status"] == "ok"
+    meta = json.loads((tmp_path / "sources" / f"01-{A}" / "metadata.json").read_text(encoding="utf-8"))
+    assert meta["questionSource"] == "manual"
+    assert meta["questionChapters"][0] == {"q": 1, "startSec": 60, "endSec": 120, "title": "Question 1"}
+    assert meta["questionChapters"][-1] == {"q": 20, "startSec": 1200, "endSec": 1300, "title": "Question 20"}
+
+
+def test_spoken_markers_take_precedence_over_manual_starts(tmp_path):
+    write_starts(tmp_path, [50 * m for m in range(1, 21)])
+    run(tmp_path, SpokenClient([A], infos={A: NO_CHAPTERS}))
+    meta = json.loads((tmp_path / "sources" / f"01-{A}" / "metadata.json").read_text(encoding="utf-8"))
+    assert meta["questionSource"] == "spoken"
+
+
+@pytest.mark.parametrize("starts", [[60] * 20, list(range(19)), [60 * m for m in range(1, 20)] + [5000], "x"])
+def test_invalid_manual_question_starts_are_an_error(tmp_path, starts):
+    write_starts(tmp_path, starts)
+    result = run(tmp_path, FakeClient([A], infos={A: NO_CHAPTERS}))[0]
+    assert result["status"] == "error"
+    assert result["detail"] == "question-starts.json must list 20 increasing start seconds within the video"
