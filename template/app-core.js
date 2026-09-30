@@ -144,11 +144,78 @@
     return Object.assign({}, state, { queue: shuffle(state.queue, rng), passAnswered: [] });
   }
 
+  function pct(n, d) {
+    return d ? Math.round((100 * n) / d) : 0;
+  }
+
+  function gradeExam(questions, answers) {
+    const byDomain = {};
+    const results = {};
+    let correct = 0;
+    questions.forEach((q) => {
+      const ok = isCorrect(answers[q.id] || [], q.correct);
+      results[q.id] = ok;
+      const bucket = byDomain[q.domain] || (byDomain[q.domain] = { correct: 0, total: 0 });
+      bucket.total += 1;
+      if (ok) { bucket.correct += 1; correct += 1; }
+    });
+    return { correct, total: questions.length, pct: pct(correct, questions.length), byDomain, results };
+  }
+
+  function recordExam(state, questions, grade, startedAt, now) {
+    let next = state;
+    questions.forEach((q) => { next = recordAnswer(next, q.id, grade.results[q.id], now, false); });
+    const entry = {
+      at: now, scorePct: grade.pct, correct: grade.correct, total: grade.total,
+      byDomain: grade.byDomain, durationSec: Math.round((now - startedAt) / 1000),
+    };
+    return Object.assign({}, next, { examHistory: next.examHistory.concat([entry]) });
+  }
+
+  function summarize(state, questions) {
+    const empty = () => ({ attempts: 0, correct: 0, seen: 0, pct: 0 });
+    const overall = empty();
+    const byDomain = {};
+    const byVideo = {};
+    questions.forEach((q) => {
+      const s = state.questionStats[q.id];
+      if (!s) return;
+      const buckets = [overall, byDomain[q.domain] || (byDomain[q.domain] = empty()), byVideo[q.video] || (byVideo[q.video] = empty())];
+      buckets.forEach((b) => { b.attempts += s.attempts; b.correct += s.correct; b.seen += 1; });
+    });
+    [overall].concat(Object.values(byDomain), Object.values(byVideo)).forEach((b) => { b.pct = pct(b.correct, b.attempts); });
+    return { overall, byDomain, byVideo };
+  }
+
+  function weakest(state, limit) {
+    const accuracy = (s) => s.correct / s.attempts;
+    return Object.keys(state.questionStats)
+      .map((id) => ({ id, s: state.questionStats[id] }))
+      .filter((x) => x.s.attempts > 0 && x.s.correct < x.s.attempts)
+      .sort((a, b) => accuracy(a.s) - accuracy(b.s) || b.s.attempts - a.s.attempts || b.s.lastAt - a.s.lastAt)
+      .slice(0, limit)
+      .map((x) => x.id);
+  }
+
+  function remainingMs(deadline, now) {
+    return Math.max(0, deadline - now);
+  }
+
+  function formatClock(ms) {
+    const total = Math.ceil(ms / 1000);
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+  }
+
+  function videoUrl(q) {
+    return `https://www.youtube.com/watch?v=${q.videoId}&t=${q.timestampSec}s`;
+  }
+
   const api = {
     mulberry32, shuffle, examQuotas, sampleExam,
     isCorrect, toggleSelection, isOptionLocked, canSubmit,
     SCHEMA_VERSION, createState, validateImport, migrateState, loadState,
     filterIds, sessionIds, recordAnswer, newPass,
+    pct, gradeExam, recordExam, summarize, weakest, remainingMs, formatClock, videoUrl,
   };
   root.PebCore = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
