@@ -68,11 +68,7 @@ def normalize(text: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9]+", " ", text.lower()).split())
 
 
-def find_anchor_start(lines: list[Line], anchor: str) -> int | None:
-    """Start second of the line where the first whole-word match of `anchor` begins."""
-    target = normalize(anchor)
-    if not target:
-        return None
+def _joined(lines: list[Line]) -> tuple[str, list[tuple[int, int]]]:
     joined, offsets = "", []
     for line in lines:
         piece = normalize(line.text)
@@ -82,15 +78,42 @@ def find_anchor_start(lines: list[Line], anchor: str) -> int | None:
             joined += " "
         offsets.append((len(joined), line.start))
         joined += piece
-    pos = f" {joined} ".find(f" {target} ")
-    if pos < 0:
-        return None
+    return joined, offsets
+
+
+def _second_at(offsets: list[tuple[int, int]], pos: int) -> int:
     start = offsets[0][1]
     for offset, second in offsets:
         if offset > pos:
             break
         start = second
     return start
+
+
+def find_anchor_start(lines: list[Line], anchor: str) -> int | None:
+    """Start second of the line where the first whole-word match of `anchor` begins."""
+    target = normalize(anchor)
+    if not target:
+        return None
+    joined, offsets = _joined(lines)
+    pos = f" {joined} ".find(f" {target} ")
+    return None if pos < 0 else _second_at(offsets, pos)
+
+
+def spoken_question_chapters(lines: list[Line], first_n: int, count: int, duration_sec: int) -> list[dict]:
+    """Question sections from the narrator saying "Question N", for videos without chapters."""
+    joined, offsets = _joined(lines)
+    padded = f" {joined} "
+    starts, pos = [], 0
+    for n in range(first_n, first_n + count):
+        found = padded.find(f" question {n} ", pos)
+        if found < 0:
+            break
+        starts.append(_second_at(offsets, found))
+        pos = found + 1
+    ends = starts[1:] + [duration_sec]
+    return [{"q": i, "startSec": s, "endSec": e, "title": f"Question {first_n + i - 1}"}
+            for i, (s, e) in enumerate(zip(starts, ends), start=1)]
 
 
 def anchor_window(chapter: dict) -> tuple[int, int]:

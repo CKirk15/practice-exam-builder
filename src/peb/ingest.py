@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 from peb.dva_c02 import QUESTIONS_PER_VIDEO
-from peb.transcript import clean_vtt, question_chapters, render_transcript
+from peb.transcript import clean_vtt, question_chapters, render_transcript, spoken_question_chapters
 
 MANUAL_LANGS = ["en", "en-US", "en-GB", "en-orig"]
 AUTO_LANGS = ["en-orig", "en", "en-US", "en-GB"]
@@ -114,17 +114,25 @@ def _chapter_mismatch_detail(qchapters_count: int) -> str:
 def _ingest_video(client, item: dict, folder: Path) -> dict:
     try:
         info = client.video_info(item["videoId"])
-        qchapters = question_chapters(info["chapters"])
+        duration = info["durationSec"] or item["durationSec"]
+        qchapters, source = question_chapters(info["chapters"]), "chapters"
         folder.mkdir(parents=True, exist_ok=True)
-        metadata = {**item, "durationSec": info["durationSec"] or item["durationSec"],
-                    "chapters": info["chapters"], "questionChapters": qchapters}
-        (folder / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
         track = pick_caption_track(info)
-        if track is None:
+        lines = None
+        if track is not None:
+            vtt = client.download_captions(item["videoId"], track[0], track[1], folder)
+            (folder / "captions.vtt").write_text(vtt, encoding="utf-8")
+            lines = clean_vtt(vtt)
+            if not qchapters:
+                first_n = (item["index"] - 1) * QUESTIONS_PER_VIDEO + 1
+                qchapters = spoken_question_chapters(lines, first_n, QUESTIONS_PER_VIDEO, duration)
+                source = "spoken"
+        metadata = {**item, "durationSec": duration, "chapters": info["chapters"],
+                    "questionSource": source, "questionChapters": qchapters}
+        (folder / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
+        if lines is None:
             return _result(item, "no-captions", "no English captions available")
-        vtt = client.download_captions(item["videoId"], track[0], track[1], folder)
-        (folder / "captions.vtt").write_text(vtt, encoding="utf-8")
-        (folder / "transcript.txt").write_text(render_transcript(clean_vtt(vtt), qchapters), encoding="utf-8")
+        (folder / "transcript.txt").write_text(render_transcript(lines, qchapters), encoding="utf-8")
     except Exception as exc:  # boundary: report per video and keep going
         return _result(item, "error", str(exc) or type(exc).__name__)
     if len(qchapters) != QUESTIONS_PER_VIDEO:

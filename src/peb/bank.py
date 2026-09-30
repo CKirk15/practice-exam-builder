@@ -156,7 +156,7 @@ def _source_problems(q: dict, pos: int, source: dict) -> list[str]:
         return [f"no question chapter {pos} in metadata.json"]
     chapter = chapters[pos - 1]
     problems = []
-    if q.get("chapterTitle") != chapter["title"]:
+    if source["questionSource"] == "chapters" and q.get("chapterTitle") != chapter["title"]:
         problems.append(f"chapterTitle must be {chapter['title']!r}")
     if q.get("timestampSec") != chapter["startSec"]:
         problems.append(f"timestampSec must be {chapter['startSec']}")
@@ -206,7 +206,8 @@ def _load_source(folder: Path) -> dict | None:
         return None
     if not isinstance(metadata, dict) or not isinstance(metadata.get("questionChapters"), list):
         return None
-    return {"chapters": metadata["questionChapters"], "lines": parse_transcript(transcript)}
+    return {"chapters": metadata["questionChapters"], "lines": parse_transcript(transcript),
+            "questionSource": metadata.get("questionSource", "chapters")}
 
 
 def _read_json(path: Path):

@@ -117,3 +117,38 @@ def test_ingest_detects_chapter_mismatch_on_rerun_without_redownload(tmp_path):
 
 def test_failed_statuses():
     assert FAILED == {"no-captions", "chapter-mismatch", "error"}
+
+
+SPOKEN_VTT = "WEBVTT\n\n" + "".join(
+    f"00:{m:02d}:00.000 --> 00:{m:02d}:05.000\nQuestion {m}. Stem {m} text\n\n" for m in range(1, 21))
+
+
+class SpokenClient(FakeClient):
+    def download_captions(self, video_id, lang, automatic, dest_dir):
+        self.downloads.append((video_id, lang, automatic))
+        return SPOKEN_VTT
+
+
+def test_ingest_uses_spoken_markers_when_video_has_no_chapters(tmp_path):
+    info = {"durationSec": 1300, "chapters": [], "subtitles": [], "automatic_captions": ["en-orig"]}
+    result = run(tmp_path, SpokenClient([A], infos={A: info}))[0]
+    assert result["status"] == "ok"
+    meta = json.loads((tmp_path / "sources" / f"01-{A}" / "metadata.json").read_text(encoding="utf-8"))
+    assert meta["questionSource"] == "spoken"
+    assert meta["questionChapters"][0] == {"q": 1, "startSec": 60, "endSec": 120, "title": "Question 1"}
+    assert meta["questionChapters"][-1] == {"q": 20, "startSec": 1200, "endSec": 1300, "title": "Question 20"}
+    transcript = (tmp_path / "sources" / f"01-{A}" / "transcript.txt").read_text(encoding="utf-8")
+    assert "=== Q20 [0:20:00–0:21:40] Question 20 ===" in transcript
+
+
+def test_ingest_records_chapter_source(tmp_path):
+    run(tmp_path, FakeClient([A]))
+    meta = json.loads((tmp_path / "sources" / f"01-{A}" / "metadata.json").read_text(encoding="utf-8"))
+    assert meta["questionSource"] == "chapters"
+
+
+def test_ingest_reports_chapter_mismatch_when_no_chapters_and_no_spoken_markers(tmp_path):
+    info = {"durationSec": 1300, "chapters": [], "subtitles": [], "automatic_captions": ["en-orig"]}
+    result = run(tmp_path, FakeClient([A], infos={A: info}))[0]
+    assert result["status"] == "chapter-mismatch"
+    assert result["detail"] == "0 question chapters (expected 20)"

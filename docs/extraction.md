@@ -11,6 +11,7 @@ the narrator reads aloud. Faithfulness beats polish: never invent content.
 - `sources/<nn>-<videoId>/transcript.txt`. Lines look like `[h:mm:ss] text`.
   Before each question chapter there is a header line:
   `=== Q07 [0:10:39–0:13:51] Lambda concurrency throttling ===`.
+  `metadata.json` also has `questionSource`. `"chapters"` means the sections come from YouTube chapters and headers carry the chapter title. `"spoken"` means the video has no chapters. The sections were found from the narrator saying "Question N" (the global number), and headers read `=== Q07 [0:10:39–0:13:51] Question 47 ===`.
 
 The narrator often says "Question seven, …" a second or two **before** the
 chapter header. So the stem's first words may sit just above the header, at the
@@ -68,7 +69,8 @@ Field rules:
 |---|---|
 | `id` | `<videoId>-q<NN>`, where `NN` is the chapter number (01–20) |
 | `n` | `(video − 1) × 20 + NN` |
-| `chapterTitle`, `timestampSec` | copied exactly from `questionChapters[NN-1]` (`title`, `startSec`) |
+| `chapterTitle` | `"chapters"` source: copied exactly from `questionChapters[NN-1].title`. `"spoken"` source: write a short topic label yourself (3–6 words, sentence case, in the style of "Managing application secrets" or "KMS envelope encryption") that names what the question tests. |
+| `timestampSec` | copied exactly from `questionChapters[NN-1].startSec` |
 | `anchor` | 6–12 **consecutive words copied verbatim from transcript.txt** where the stem begins (the words after "Question N"). Copy exactly as the captions show them, even if they're misspelled. Punctuation and case don't matter. |
 | `stem` | The question text, near-verbatim. Fix obvious caption errors (e.g. "AWSKMS" → "AWS KMS", "B 64" → "Base64", "anti-attern" → "anti-pattern", "DVAC02" → "DVA-C02"). Use proper AWS service capitalization. Drop "Question N." |
 | `options` | One entry per option read aloud, keys `A`, `B`, … in order. `t` is the option text, near-verbatim. |
@@ -80,6 +82,7 @@ Field rules:
 
 ## Hard rules
 
+- An anchor must be distinctive. The validator uses its **first** occurrence in the whole transcript, so if the stem opens with a stock phrase ("A company is developing an application"), extend the anchor with the next distinctive words.
 - **One chapter = one question.** Never merge, split, skip or pad questions to
   reach 20. If a chapter doesn't contain exactly one question, stop, leave the
   file incomplete, and report it. Don't "fix" it.

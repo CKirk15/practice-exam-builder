@@ -120,3 +120,17 @@ def test_load_bank_returns_videos_and_questions_in_global_order(tmp_path):
     assert videos == [{"index": 1, "videoId": video_id(1), "title": "Part 1"},
                       {"index": 2, "videoId": video_id(2), "title": "Part 2"}]
     assert [q["n"] for q in questions] == list(range(1, 41))
+
+
+def test_spoken_source_allows_extractor_written_chapter_title(tmp_path):
+    root = make_root(tmp_path)
+    rewrite(root / "sources" / f"01-{video_id(1)}" / "metadata.json", lambda m: m.update(questionSource="spoken"))
+    rewrite(bank1(root), first(lambda q: q.update(chapterTitle="Managing application secrets")))
+    assert errors(root) == []
+
+
+def test_spoken_source_still_requires_timestamp_and_anchor_window(tmp_path):
+    root = make_root(tmp_path)
+    rewrite(root / "sources" / f"01-{video_id(1)}" / "metadata.json", lambda m: m.update(questionSource="spoken"))
+    rewrite(bank1(root), first(lambda q: q.update(timestampSec=5)))
+    assert f"{Q1}: timestampSec must be 200" in messages(root)

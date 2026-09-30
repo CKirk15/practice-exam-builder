@@ -73,6 +73,8 @@ with a pilot gate (§4.2). yt-dlp warns that YouTube extraction without a JS
 runtime is deprecated. If ingest fails for that reason, install `deno`,
 which yt-dlp uses by default.
 
+**Correction (ingest, 2026-09-30):** only videos 01–02 have chapters. Videos 03–25 have none. Their narration marks each question as "Question N" (global number), so for those videos ingest derives question sections from the first in-order occurrence of each spoken marker (`questionSource: "spoken"`). The extractor then writes `chapterTitle` as a short topic label.
+
 ## 3. Architecture
 
 ```
@@ -310,8 +312,9 @@ are found.
 
 **Source rules** (need `sources/<nn>-<videoId>/`)
 - `n` equals `(video − 1) × 20 + q`.
-- `chapterTitle` and `timestampSec` equal the title and start of question
-  chapter `q` in `metadata.json`.
+- `timestampSec` equals the start of question chapter `q` in `metadata.json`.
+  `chapterTitle` equals that chapter's title only when `questionSource` is
+  `"chapters"`; for `"spoken"` sources it is a free-form topic label.
 - The normalized `anchor` occurs in the normalized transcript text
   (header lines excluded, cue lines joined). The start time of the cue where
   its **first** occurrence begins lies in the window

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from peb.transcript import (
     Line, anchor_window, clean_vtt, find_anchor_start, normalize,
-    parse_transcript, question_chapters, render_transcript,
+    parse_transcript, question_chapters, render_transcript, spoken_question_chapters,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "youtube-auto.vtt"
@@ -100,3 +100,29 @@ def test_find_anchor_start_missing_returns_none():
 def test_anchor_window_leads_chapter_by_15_seconds_and_clamps_at_zero():
     assert anchor_window({"startSec": 339, "endSec": 600}) == (324, 585)
     assert anchor_window({"startSec": 5, "endSec": 60}) == (0, 45)
+
+
+SPOKEN = [
+    Line(0, "Welcome to part three."),
+    Line(14, "Question 41. A company runs"),
+    Line(20, "an app. Option A is incorrect."),
+    Line(100, "as we saw, question 41 matters. Question"),
+    Line(101, "42. A developer needs"),
+    Line(200, "Question 43. Which solution"),
+]
+
+
+def test_spoken_question_chapters_follow_markers_in_order_even_across_lines():
+    assert spoken_question_chapters(SPOKEN, 41, 3, 300) == [
+        {"q": 1, "startSec": 14, "endSec": 100, "title": "Question 41"},
+        {"q": 2, "startSec": 100, "endSec": 200, "title": "Question 42"},
+        {"q": 3, "startSec": 200, "endSec": 300, "title": "Question 43"},
+    ]
+
+
+def test_spoken_question_chapters_stop_at_first_missing_number():
+    assert [c["title"] for c in spoken_question_chapters(SPOKEN, 41, 5, 300)] == ["Question 41", "Question 42", "Question 43"]
+
+
+def test_spoken_question_chapters_match_whole_numbers_only():
+    assert spoken_question_chapters([Line(0, "Question 410 is not it")], 41, 1, 60) == []
