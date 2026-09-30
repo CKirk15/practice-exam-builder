@@ -71,3 +71,14 @@ def make_root(root: Path, videos: int = 4) -> Path:
     entries = [write_video(root, i) for i in range(1, videos + 1)]
     write_json(root / "sources" / "playlist.json", entries)
     return root
+
+
+MINIMAL_TEMPLATE = "<html><title>DVA-C02 Practice (unofficial)</title><script>/*__CORE__*/</script><script>/*__BANK__*/</script></html>"
+
+
+def write_minimal_template(root: Path) -> Path:
+    folder = root / "template"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "app.html").write_text(MINIMAL_TEMPLATE, encoding="utf-8")
+    (folder / "app-core.js").write_text("var PebCore = {};", encoding="utf-8")
+    return root
