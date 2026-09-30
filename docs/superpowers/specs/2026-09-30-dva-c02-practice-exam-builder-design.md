@@ -55,8 +55,23 @@ Most questions are single-answer multiple choice with 4 options. A few are
 state a DVA-C02 domain, so that tag is assigned during extraction on a
 best-effort basis.
 
-This format is **unproven against real captions**, so extraction starts with
-a pilot gate (§4.2).
+**Verified with yt-dlp on 2026-09-30**:
+
+- The playlist is "AWS Certified Developer - Associate (DVA-C02) | Full
+  Course: 500 Real Exam Questions | CertPro Deep Dive", with 25 videos.
+- Video titles carry global numbering, for example "Part 7 (Q121-140)".
+- Each video runs about 62–75 minutes.
+- Each video has **21 YouTube chapters**: an "Introduction and setup"
+  chapter first, then **one chapter per question**, titled with the
+  question's topic (e.g. "Managing application secrets").
+- There are **no manual subtitles**, only automatic English captions
+  (`en`, `en-orig`).
+
+Chapters therefore give exact question boundaries. Caption quality is still
+unproven (auto-captions can garble option letters), so extraction starts
+with a pilot gate (§4.2). yt-dlp warns that YouTube extraction without a JS
+runtime is deprecated. If ingest fails for that reason, install `deno`,
+which yt-dlp uses by default.
 
 ## 3. Architecture
 
@@ -121,8 +136,14 @@ seeded PRNG (mulberry32, included in core) and fixed times.
   - Later runs reuse the pinned indices. Videos new to the playlist are
     appended with the next index.
   - Videos that have disappeared are reported but kept.
-- For each video it writes `sources/<nn>-<videoId>/metadata.json` (one entry
-  of the manifest), where `nn` is `index` zero-padded to 2 digits.
+- For each video it writes `sources/<nn>-<videoId>/metadata.json`, where
+  `nn` is `index` zero-padded to 2 digits. The file holds the manifest entry
+  plus:
+  - `chapters: [{startSec, endSec, title}]`
+  - `questionChapters`: the chapters minus a leading intro chapter (the first
+    chapter, when its title matches `/intro/i`), numbered 1..N.
+- A video with **no chapters**, or with a question-chapter count other than
+  20, is reported as `chapter-mismatch`. That status is not ok.
 - **Captions:**
   - English only. Manual subtitles are preferred over automatic captions.
   - Language codes are tried in order: `en`, `en-US`, `en-GB`, `en-orig`,
@@ -135,6 +156,10 @@ seeded PRNG (mulberry32, included in core) and fixed times.
   - Rolling auto-caption duplicates are removed (a cue that repeats the
     previous cue's tail keeps only its new words).
   - Consecutive identical lines are collapsed.
+  - Before the first cue of each question chapter, a section header line is
+    inserted: `=== Q07 [0:10:39–0:13:51] Lambda concurrency throttling ===`.
+    Extraction and validation both use these headers to scope each question
+    to its chapter.
 - **Politeness and robustness:**
   - A configurable delay between videos (`--delay`, default 2s).
   - An optional `--cookies-from-browser <browser>` flag, passed through to
@@ -142,7 +167,7 @@ seeded PRNG (mulberry32, included in core) and fixed times.
   - Each video is attempted once per run, and errors are reported per video.
 - Ingest is idempotent: a video whose `transcript.txt` already exists is
   skipped unless `--force` is given.
-- It ends with a summary table (ok / no-captions / error). The exit code is
+- It ends with a summary table (ok / no-captions / chapter-mismatch / error). The exit code is
   non-zero if any video is not ok.
 
 ### 4.2 Extraction (Claude Code, documented procedure)
@@ -164,21 +189,24 @@ the same for every video.
 - **Faithful.** The stem, options, topic discussion, and explanations stay
   close to the narrator's wording. Transcription errors may be fixed and
   filler removed, but facts are never added.
+- **One chapter = one question.** Question `qNN` is extracted only from the
+  transcript section under header `=== QNN … ===`. The chapter title is
+  copied into `chapterTitle`, and `timestampSec` is set to the chapter start.
 - **Anchor.** Each question records `anchor`, 6–12 consecutive words copied
-  verbatim from `transcript.txt` where the stem begins. The validator checks
-  that the anchor appears in the transcript.
-- **Timestamp.** `timestampSec` is the start of the cue containing the
-  anchor.
+  verbatim from its chapter section where the stem begins. The validator
+  checks that the anchor appears in *that* section, which catches questions
+  that were shifted or swapped between chapters.
 - **Missing distractor explanation.** If the narration doesn't explain a
   specific distractor, its `why` is set to exactly `"Not covered in the
   video."`. It is never invented.
 - **Correct options.** `why` on a correct option is required. It is a short
   statement of why that option is correct; `correctWhy` holds the fuller
   explanation.
-- **Never pad, split, or merge questions to reach a count.** If the video
-  doesn't contain exactly 20 questions, the subagent records the actual
-  count as `expectedCount`, explains why in `countNote`, and flags it in the
-  notes for user confirmation.
+- **Never pad, split, or merge questions to reach a count.** The count comes
+  from the chapters. If a chapter turns out to hold zero questions or more
+  than one, the subagent stops and reports it; it does not "fix" it. The user
+  then decides whether to set `expectedCount` (with a `countNote`) for that
+  video.
 - **Notes.** It writes `bank/<nn>-<videoId>.notes.md`, listing:
   - uncertain items (answer not clearly stated, garbled options, suspected
     caption errors) with question ids
@@ -214,7 +242,9 @@ Question:
   "id": "abc123-q07",
   "video": 3,
   "videoId": "abc123",
-  "timestampSec": 761,
+  "n": 47,
+  "chapterTitle": "Lambda concurrency throttling",
+  "timestampSec": 600,
   "anchor": "a developer needs to store session state",
   "domain": 1,
   "task": "1.2",
@@ -233,6 +263,10 @@ Question:
 Question ids are built from `videoId`, not the playlist position. That keeps
 stats attached to the right question even if the playlist is reordered.
 
+`n` is the global question number used in the video titles:
+`(video − 1) × 20 + q`, so Part 3, Q07 is 47. The app displays questions as
+"Q47 · Lambda concurrency throttling".
+
 ### 4.4 `peb validate [path…]`
 
 Validates all of `bank/` by default, or the given files. It reports **every**
@@ -243,7 +277,9 @@ are found.
 - The filename matches `<nn>-<videoId>.json`.
 - `video` and `videoId` match the filename, `sources/playlist.json`, and
   every question.
-- The question count equals `expectedCount`.
+- The question count equals `expectedCount`, which in turn equals the
+  number of `questionChapters` in `metadata.json` unless `countNote`
+  explains the difference.
 - If `expectedCount` ≠ 20, `countNote` is non-empty. This case also prints a
   warning even when the file is otherwise valid.
 
@@ -265,11 +301,12 @@ are found.
 - Every key in `correct` exists in `options`.
 - `stem`, `topic`, and `correctWhy` are non-empty.
 
-**Transcript rules** (need `sources/<nn>-<videoId>/transcript.txt`)
-- The normalized `anchor` is a substring of the normalized transcript.
-- `timestampSec` is within `[0, durationSec]`.
-- `timestampSec` is strictly increasing across questions, with at least 30s
-  between consecutive questions.
+**Source rules** (need `sources/<nn>-<videoId>/`)
+- `n` equals `(video − 1) × 20 + q`.
+- `chapterTitle` and `timestampSec` equal the title and start of question
+  chapter `q` in `metadata.json`.
+- The normalized `anchor` is a substring of the normalized text of chapter
+  `q`'s section in `transcript.txt`, and of no other question's section.
 
 ### 4.5 `peb build`
 
@@ -283,7 +320,7 @@ are found.
   - `/*__BANK__*/` is replaced with `const BANK = {…};`, holding `bankVersion`,
     `exam` constants, `domains` (from `dva_c02.py`), `videos`, and
     `questions`.
-- In the embedded JSON, `<` is escaped as `<`, which neutralizes
+- In the embedded JSON, `<` is escaped as `003c`, which neutralizes
   `</script` and `<!--`.
 - Writes `dist/dva-c02-practice.html`.
 
