@@ -146,8 +146,13 @@ seeded PRNG (mulberry32, included in core) and fixed times.
   20, is reported as `chapter-mismatch`. That status is not ok.
 - **Captions:**
   - English only. Manual subtitles are preferred over automatic captions.
-  - Language codes are tried in order: `en`, `en-US`, `en-GB`, `en-orig`,
-    then any `en-*`.
+  - Manual language codes are tried in order: `en`, `en-US`, `en-GB`,
+    `en-orig`, then any `en-*`.
+  - Automatic captions try `en-orig` first (the original-language track;
+    in probing, the auto `en` track returned HTTP 429 while `en-orig`
+    succeeded), then `en`, `en-US`, `en-GB`, then any `en-*`.
+  - yt-dlp is invoked as a subprocess (`python -m yt_dlp`) with
+    `--js-runtimes node`.
   - The raw file is saved as `captions.vtt`.
 - **Transcript cleaning** turns `captions.vtt` into `transcript.txt`:
   - One line per cue, formatted `[h:mm:ss] text`. Hours are always present,
@@ -189,13 +194,15 @@ the same for every video.
 - **Faithful.** The stem, options, topic discussion, and explanations stay
   close to the narrator's wording. Transcription errors may be fixed and
   filler removed, but facts are never added.
-- **One chapter = one question.** Question `qNN` is extracted only from the
-  transcript section under header `=== QNN … ===`. The chapter title is
+- **One chapter = one question.** Question `qNN` is extracted from the
+  transcript section under header `=== QNN … ===`. The narrator often says
+  "Question N" a second or two *before* the chapter starts, so the stem's
+  first words may sit at the very end of the previous section. The chapter title is
   copied into `chapterTitle`, and `timestampSec` is set to the chapter start.
 - **Anchor.** Each question records `anchor`, 6–12 consecutive words copied
-  verbatim from its chapter section where the stem begins. The validator
-  checks that the anchor appears in *that* section, which catches questions
-  that were shifted or swapped between chapters.
+  verbatim from the transcript where the stem begins. The validator checks
+  that the anchor's first occurrence lies in that chapter's window (below),
+  which catches questions that were shifted or swapped between chapters.
 - **Missing distractor explanation.** If the narration doesn't explain a
   specific distractor, its `why` is set to exactly `"Not covered in the
   video."`. It is never invented.
@@ -305,8 +312,12 @@ are found.
 - `n` equals `(video − 1) × 20 + q`.
 - `chapterTitle` and `timestampSec` equal the title and start of question
   chapter `q` in `metadata.json`.
-- The normalized `anchor` is a substring of the normalized text of chapter
-  `q`'s section in `transcript.txt`, and of no other question's section.
+- The normalized `anchor` occurs in the normalized transcript text
+  (header lines excluded, cue lines joined). The start time of the cue where
+  its **first** occurrence begins lies in the window
+  `[chapterStart − 15s, chapterEnd − 15s)`. The 15s lead absorbs the
+  narrator starting slightly before the chapter mark, and the windows of
+  adjacent questions don't overlap.
 
 ### 4.5 `peb build`
 
