@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DVA-C02 Practice (unofficial)</title>
+<style>
+  :root{
+    --ink:#16191f; --muted:#5f6b7a; --bg:#f2f3f3; --card:#ffffff; --border:#d5dbdb;
+    --squid:#232f3e; --squid-dark:#161e2d; --orange:#ff9900; --orange-hover:#ec7211; --on-orange:#16191f;
+    --green:#1d8102; --green-bg:#f2fcf3; --red:#d13212; --red-bg:#fdf3f1;
+    --amber:#8a5a00; --amber-bg:#fff7e6; --info:#0972d3; --info-bg:#f1faff; --chip:#ffffff; --track:#e9ebed;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:#e9ebed; --muted:#9ba7b6; --bg:#0f141a; --card:#192534; --border:#414d5c;
+      --squid:#0f1b2a; --squid-dark:#0a121c;
+      --green:#62d26f; --green-bg:#11261a; --red:#ff7a5c; --red-bg:#2e1511;
+      --amber:#ffc56b; --amber-bg:#2d2210; --info:#5fb3ff; --info-bg:#0e2338; --chip:#192534; --track:#2a3746;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:15px}
+  a{color:var(--info)}
+  .topbar{background:var(--squid);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:3px solid var(--orange);flex-wrap:wrap}
+  .topbar h1{margin:0;font-size:17px;font-weight:700}
+  .topbar .unofficial{font-weight:400;opacity:.75;font-size:13px}
+  .topbar .sub{font-size:12px;opacity:.8}
+  .top-right{display:flex;align-items:center;gap:14px}
+  .toplink{background:none;border:none;color:#fff;font:inherit;cursor:pointer;opacity:.9}
+  .toplink:hover{color:var(--orange)}
+  .timer{font-variant-numeric:tabular-nums;font-size:20px;font-weight:700;background:var(--squid-dark);border:1px solid #414d5c;padding:4px 12px;border-radius:6px}
+  .timer.low{background:#d13212;border-color:#d13212}
+  .app{max-width:1100px;margin:0 auto;padding:20px 16px 80px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin-bottom:16px;box-shadow:0 1px 1px rgba(0,28,36,.1)}
+  h2{margin:0 0 10px;font-size:20px} h3{font-size:15px;margin:16px 0 8px} h4{margin:14px 0 4px;font-size:14px}
+  .muted{color:var(--muted)} .small{font-size:13px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;background:var(--orange);color:var(--on-orange);border:2px solid var(--orange);padding:8px 20px;border-radius:20px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.4;cursor:pointer}
+  .btn:hover{background:var(--orange-hover);border-color:var(--orange-hover)}
+  .btn.secondary{background:transparent;color:var(--ink);border-color:var(--ink)}
+  .btn.secondary:hover{background:var(--track)}
+  .btn.danger{background:transparent;color:var(--red);border-color:var(--red)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.block{width:100%;margin-top:10px}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .linkbtn{background:none;border:none;color:var(--info);cursor:pointer;font:inherit;text-decoration:underline;padding:0;text-align:left}
+  .banner{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:10px 14px;margin-bottom:16px}
+  .progress{height:10px;background:var(--track);border-radius:6px;overflow:hidden;margin:6px 0 16px}
+  .progress-fill{height:100%;background:var(--orange)}
+  .progress-label{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:14px}
+  .table-wrap{overflow-x:auto}
+  .table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+  .table th,.table td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--border)}
+  .table th{color:var(--muted);font-size:12px;text-transform:uppercase;font-weight:600}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{padding:6px 14px;border-radius:16px;border:1px solid var(--border);background:var(--chip);color:var(--ink);font-size:13px;cursor:pointer;font-family:inherit}
+  .chip.active{background:var(--ink);color:var(--card);border-color:var(--ink)}
+  .q-header{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .q-meta{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+  .q-count{font-size:13px;color:var(--muted)}
+  .q-title{font-size:16px;margin:8px 0 0}
+  .q-text{font-size:16px;margin:10px 0 14px;white-space:pre-line}
+  .select-hint{display:inline-block;background:var(--amber-bg);color:var(--amber);font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;margin-bottom:12px}
+  .option{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer}
+  .option:hover{border-color:var(--orange)}
+  .option.selected{border-color:var(--orange);background:var(--amber-bg)}
+  .option.locked{opacity:.55;cursor:not-allowed}
+  .option.correct{border-color:var(--green);background:var(--green-bg)}
+  .option.incorrect{border-color:var(--red);background:var(--red-bg)}
+  .option input{margin-top:4px;accent-color:var(--orange);width:16px;height:16px;flex-shrink:0}
+  .opt-key{font-weight:700}
+  .footer-nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .verdict{margin-top:16px;padding:10px 14px;border-radius:8px;font-weight:700}
+  .verdict.right{background:var(--green-bg);color:var(--green);border:1px solid var(--green)}
+  .verdict.wrong{background:var(--red-bg);color:var(--red);border:1px solid var(--red)}
+  .explain{margin-top:10px;padding:4px 16px 12px;border-left:3px solid var(--orange);background:var(--info-bg);border-radius:6px;font-size:14px}
+  .explain p{margin:4px 0}
+  ul.plain{list-style:none;padding:0;margin:4px 0}
+  .why{padding:6px 0;border-bottom:1px dashed var(--border)}
+  .why:last-child{border-bottom:none}
+  .tag{font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;text-transform:uppercase;margin-left:4px}
+  .tag.right{background:var(--green-bg);color:var(--green)} .tag.wrong{background:var(--red-bg);color:var(--red)} .tag.pick{background:var(--track);color:var(--ink)}
+  .exam-layout{display:grid;grid-template-columns:230px 1fr;gap:16px;align-items:start}
+  .nav-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;position:sticky;top:12px}
+  .nav-panel h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;color:var(--muted)}
+  .nav-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+  .nav-btn{aspect-ratio:1;border-radius:4px;border:1px solid var(--border);background:var(--chip);color:var(--ink);font-size:11px;cursor:pointer;padding:0;position:relative}
+  .nav-btn.answered{background:var(--ink);color:var(--card);border-color:var(--ink)}
+  .nav-btn.current{outline:2px solid var(--orange);outline-offset:1px;font-weight:700}
+  .nav-btn.flagged::after{content:"";position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:var(--orange)}
+  .legend{margin-top:10px;font-size:11px;color:var(--muted);display:grid;gap:3px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle;border:1px solid var(--border)}
+  .dot.answered{background:var(--ink)} .dot.flag{background:var(--orange);border-radius:50%;border-color:var(--orange)}
+  .score-hero{text-align:center}
+  .score-big{font-size:46px;font-weight:800}
+  .pass-pill{display:inline-block;margin-top:10px;padding:5px 16px;border-radius:16px;font-weight:700}
+  .pass-pill.pass{background:var(--green-bg);color:var(--green)} .pass-pill.fail{background:var(--red-bg);color:var(--red)}
+  .bar{display:inline-block;vertical-align:middle;width:90px;height:8px;background:var(--track);border-radius:4px;overflow:hidden;margin-right:6px}
+  .bar>span{display:block;height:100%;background:var(--orange)}
+  .review-item{border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+  .opt-line{font-size:14px;margin:2px 0}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .stat{border:1px solid var(--border);border-radius:8px;padding:12px}
+  .stat-num{font-size:26px;font-weight:800}
+  .hidden{display:none !important}
+  @media (max-width:760px){.exam-layout{grid-template-columns:1fr}.nav-panel{position:static}.card{padding:16px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>DVA-C02 Practice <span class="unofficial">(unofficial)</span></h1>
+    <div class="sub">AWS Certified Developer – Associate · study app</div>
+  </div>
+  <div class="top-right">
+    <button class="toplink" data-go="home">Home</button>
+    <button class="toplink" data-go="stats">Statistics</button>
+    <div id="timerBox" class="timer hidden">130:00</div>
+  </div>
+</header>
+<main class="app">
+  <div id="storageBanner" class="banner hidden">Progress can't be saved in this browser (storage is unavailable). Use Export progress before closing.</div>
+
+  <section id="homeScreen">
+    <div class="card">
+      <h2>Welcome</h2>
+      <p class="muted">Unofficial study material built from the “Full Course: 500 Real Exam Questions” YouTube playlist. Not affiliated with or endorsed by AWS.</p>
+      <div class="progress-label"><span id="passProgressText"></span><span id="lifetimeText" class="muted"></span></div>
+      <div class="progress"><div class="progress-fill" id="passProgressFill"></div></div>
+      <div class="table-wrap"><table class="table" id="bankTable"></table></div>
+      <div class="btn-row">
+        <button class="btn" data-go="practiceSetup">Practice</button>
+        <button class="btn" data-go="examStart">Timed exam</button>
+        <button class="btn secondary" data-go="stats">Statistics</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Your progress data</h3>
+      <p class="small muted">Progress is stored in this browser. Keep this file in a fixed location (moving or renaming it can lose progress in some browsers) and export regularly.</p>
+      <div class="btn-row">
+        <button class="btn secondary" id="exportBtn">Export progress</button>
+        <label class="btn secondary">Import progress<input type="file" id="importInput" accept="application/json,.json" hidden></label>
+        <button class="btn danger" id="resetBtn">Reset progress</button>
+      </div>
+      <p id="dataMsg" class="small"></p>
+    </div>
+  </section>
+
+  <section id="practiceSetupScreen" class="hidden">
+    <div class="card">
+      <h2>Practice</h2>
+      <h3>Which questions</h3>
+      <div class="chips">
+        <button class="chip" data-filter="next">Next in pass</button>
+        <button class="chip" data-filter="never">Never answered</button>
+        <button class="chip" data-filter="missed">Previously missed</button>
+      </div>
+      <h3>Session size</h3>
+      <div class="chips">
+        <button class="chip" data-size="10">10</button>
+        <button class="chip" data-size="20">20</button>
+        <button class="chip" data-size="50">50</button>
+        <button class="chip" data-size="all">All</button>
+      </div>
+      <p id="filterInfo" class="muted"></p>
+      <div class="btn-row">
+        <button class="btn" id="startPracticeBtn">Start</button>
+        <button class="btn secondary hidden" id="newPassBtn">Start a new pass</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="practiceScreen" class="hidden">
+    <div class="card">
+      <div class="q-header"><span class="q-meta" id="pMeta"></span><span class="q-count" id="pCount"></span></div>
+      <h2 class="q-title" id="pTitle"></h2>
+      <div class="q-text" id="pStem"></div>
+      <div id="pHint" class="select-hint hidden"></div>
+      <div id="pOptions"></div>
+      <div id="pFeedback"></div>
+      <div class="footer-nav">
+        <button class="btn secondary" id="pQuitBtn">End session</button>
+        <div>
+          <button class="btn" id="pSubmitBtn">Submit</button>
+          <button class="btn hidden" id="pNextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="practiceSummaryScreen" class="hidden">
+    <div class="card">
+      <h2>Session complete</h2>
+      <div id="summaryBody"></div>
+      <div class="btn-row">
+        <button class="btn" data-go="practiceSetup">Another session</button>
+        <button class="btn secondary" data-go="home">Home</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="examStartScreen" class="hidden">
+    <div class="card">
+      <h2>Timed exam</h2>
+      <p id="examInfo"></p>
+      <div class="table-wrap"><table class="table" id="examQuotaTable"></table></div>
+      <ul>
+        <li>Questions are drawn at random in the DVA-C02 exam guide's domain proportions.</li>
+        <li>Answers and explanations appear only after you submit, just like exam day.</li>
+        <li>Flag questions to revisit, and jump anywhere with the navigator.</li>
+        <li>The timer auto-submits at 0:00. Reloading or closing the page abandons the exam.</li>
+        <li>The passing line here is 72%, an approximation: the real exam uses a scaled score of 720/1000.</li>
+      </ul>
+      <div class="btn-row"><button class="btn" id="beginBtn">Begin exam</button></div>
+    </div>
+  </section>
+
+  <section id="examScreen" class="hidden">
+    <div class="exam-layout">
+      <aside class="nav-panel">
+        <h3>Questions</h3>
+        <div class="nav-grid" id="navGrid"></div>
+        <div class="legend">
+          <div><span class="dot answered"></span>Answered</div>
+          <div><span class="dot"></span>Not answered</div>
+          <div><span class="dot flag"></span>Flagged</div>
+        </div>
+        <button class="btn secondary block" id="flagBtn">Flag for review</button>
+        <button class="btn block" id="submitExamBtn">Submit exam</button>
+      </aside>
+      <div class="card">
+        <div class="q-header"><span class="q-meta" id="eMeta"></span><span class="q-count" id="eCount"></span></div>
+        <div class="q-text" id="eStem"></div>
+        <div id="eHint" class="select-hint hidden"></div>
+        <div id="eOptions"></div>
+        <div class="footer-nav">
+          <button class="btn secondary" id="ePrevBtn">← Previous</button>
+          <button class="btn" id="eNextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="resultsScreen" class="hidden">
+    <div class="card score-hero">
+      <div class="q-meta">Your result</div>
+      <div class="score-big" id="scoreBig"></div>
+      <div class="muted" id="scoreSub"></div>
+      <span class="pass-pill" id="passPill"></span>
+      <p class="small muted">Passing line 72%, an approximation: the real exam uses a scaled score of 720/1000.</p>
+      <div class="table-wrap"><table class="table" id="domainResults"></table></div>
+      <div class="btn-row" style="justify-content:center">
+        <button class="btn" data-go="examStart">New exam</button>
+        <button class="btn secondary" data-go="home">Home</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Review</h2>
+      <div class="chips">
+        <button class="chip" data-review="all">All</button>
+        <button class="chip" data-review="incorrect">Incorrect</button>
+        <button class="chip" data-review="flagged">Flagged</button>
+      </div>
+      <div id="reviewList"></div>
+    </div>
+  </section>
+
+  <section id="statsScreen" class="hidden">
+    <div class="card"><h2>Statistics</h2><div class="stat-grid" id="statsOverall"></div></div>
+    <div class="card"><h3>By domain</h3><div class="table-wrap"><table class="table" id="statsDomains"></table></div></div>
+    <div class="card"><h3>Weakest questions</h3><div id="statsWeakest"></div></div>
+    <div class="card"><h3>Exam history</h3><div class="table-wrap"><table class="table" id="statsExams"></table></div></div>
+    <div class="card"><h3>By video</h3><div class="table-wrap"><table class="table" id="statsVideos"></table></div></div>
+  </section>
+</main>
+
+<script>/*__CORE__*/</script>
+<script>/*__BANK__*/</script>
+<script>
+(function () {
+  "use strict";
+  const C = PebCore;
+  const STORAGE_KEY = "peb:dva-c02";
+  const $ = (id) => document.getElementById(id);
+  const QMAP = {};
+  BANK.questions.forEach((q) => { QMAP[q.id] = q; });
+  const IDS = BANK.questions.map((q) => q.id);
+  const DOMAIN_NAME = {};
+  BANK.domains.forEach((d) => { DOMAIN_NAME[d.id] = d.name; });
+  const override = Number(new URLSearchParams(location.search).get("examMinutes"));
+  const EXAM_MINUTES = override > 0 ? override : BANK.exam.minutes;
+  const SCREENS = ["home", "practiceSetup", "practice", "practiceSummary", "examStart", "exam", "results", "stats"];
+  const FILTER_TEXT = { next: "questions left in this pass", never: "questions you have never answered", missed: "questions you missed last time" };
+
+  let storageOk = true;
+  let state = C.loadState(readStored(), IDS, BANK.bankVersion, Math.random);
+  let setup = { filter: "next", size: 20 };
+  let practice = null;
+  let exam = null;
+  let lastExam = null;
+  save();
+
+  function readStored() {
+    let raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { storageOk = false; return null; }
+    try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { storageOk = false; }
+    $("storageBanner").classList.toggle("hidden", storageOk);
+  }
+
+  function esc(text) {
+    return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function bar(p) { return `<span class="bar"><span style="width:${p}%"></span></span>`; }
+  function questionMeta(q) { return `Domain ${q.domain} · ${DOMAIN_NAME[q.domain]} · Task ${q.task}`; }
+  function videoLabel(v) { return `Part ${v.index} (Q${(v.index - 1) * 20 + 1}–${v.index * 20})`; }
+
+  function show(name) {
+    SCREENS.forEach((s) => $(s + "Screen").classList.toggle("hidden", s !== name));
+    const renderers = { home: renderHome, practiceSetup: renderPracticeSetup, examStart: renderExamStart, stats: renderStats };
+    if (renderers[name]) renderers[name]();
+    window.scrollTo(0, 0);
+  }
+
+  function markChips(attr, value) {
+    document.querySelectorAll(`[data-${attr}]`).forEach((c) => c.classList.toggle("active", c.dataset[attr] === value));
+  }
+
+  function setHint(el, selectN) {
+    el.textContent = `Choose ${selectN}`;
+    el.classList.toggle("hidden", selectN < 2);
+  }
+
+  function quotaTableHtml() {
+    const counts = {};
+    BANK.questions.forEach((q) => { counts[q.domain] = (counts[q.domain] || 0) + 1; });
+    const quotas = C.examQuotas(BANK.domains, BANK.exam.questions);
+    return "<tr><th>Domain</th><th>Weight</th><th>In bank</th><th>Per exam</th></tr>" +
+      BANK.domains.map((d) => `<tr><td>${d.id}. ${esc(d.name)}</td><td>${d.weight}%</td><td>${counts[d.id] || 0}</td><td>${quotas[d.id]}</td></tr>`).join("") +
+      `<tr><td><b>Total</b></td><td></td><td><b>${IDS.length}</b></td><td><b>${BANK.exam.questions}</b></td></tr>`;
+  }
+
+  // ---------- Home ----------
+  function renderHome() {
+    const answered = state.passAnswered.length;
+    const sum = C.summarize(state, BANK.questions);
+    $("passProgressText").textContent = `${answered} / ${IDS.length} answered this pass`;
+    $("lifetimeText").textContent = sum.overall.attempts ? `Lifetime accuracy ${sum.overall.pct}%` : "No answers yet";
+    $("passProgressFill").style.width = `${IDS.length ? (100 * answered) / IDS.length : 0}%`;
+    $("bankTable").innerHTML = quotaTableHtml();
+  }
+
+  function dataMsg(text, isError) {
+    $("dataMsg").textContent = text;
+    $("dataMsg").style.color = isError ? "var(--red)" : "var(--green)";
+  }
+
+  function exportProgress() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `dva-c02-progress-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    dataMsg("Progress exported.");
+  }
+
+  function importProgress(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      let obj;
+      try { obj = JSON.parse(reader.result); } catch (e) { dataMsg("That file isn't valid JSON.", true); return; }
+      const check = C.validateImport(obj);
+      if (!check.ok) { dataMsg(check.error, true); return; }
+      if (!confirm("Replace your current progress with the imported file?")) return;
+      state = C.loadState(obj, IDS, BANK.bankVersion, Math.random);
+      save();
+      renderHome();
+      dataMsg("Progress imported.");
+    };
+    reader.readAsText(file);
+  }
+
+  function resetProgress() {
+    if (!confirm("Reset all progress and statistics? This can't be undone.")) return;
+    state = C.createState(IDS, BANK.bankVersion, Math.random);
+    save();
+    renderHome();
+    dataMsg("Progress reset.");
+  }
+
+  // ---------- Practice ----------
+  function renderPracticeSetup() {
+    markChips("filter", setup.filter);
+    markChips("size", String(setup.size));
+    const available = C.filterIds(state, setup.filter).length;
+    const exhausted = setup.filter === "next" && available === 0;
+    $("filterInfo").textContent = available
+      ? `${available} ${FILTER_TEXT[setup.filter]}.`
+      : exhausted ? "You've answered every question in this pass." : `No ${FILTER_TEXT[setup.filter]}.`;
+    $("startPracticeBtn").disabled = available === 0;
+    $("newPassBtn").classList.toggle("hidden", !exhausted);
+  }
+
+  function startPractice(ids) {
+    practice = { ids, i: 0, selected: [], submitted: false, results: [] };
+    show("practice");
+    renderPracticeQuestion();
+  }
+
+  function renderPracticeQuestion() {
+    const q = QMAP[practice.ids[practice.i]];
+    $("pMeta").textContent = questionMeta(q);
+    $("pCount").textContent = practice.ids.length === 1 ? "Single question" : `Question ${practice.i + 1} of ${practice.ids.length} this session`;
+    $("pTitle").textContent = practice.submitted ? `Q${q.n} · ${q.chapterTitle}` : `Q${q.n}`;
+    $("pStem").textContent = q.stem;
+    setHint($("pHint"), q.selectN);
+    renderOptions($("pOptions"), q, practice.selected, practice.submitted, (sel) => { practice.selected = sel; renderPracticeQuestion(); });
+    $("pFeedback").innerHTML = practice.submitted ? explanationHtml(q, practice.selected) : "";
+    $("pSubmitBtn").classList.toggle("hidden", practice.submitted);
+    $("pSubmitBtn").disabled = !C.canSubmit(practice.selected, q.selectN);
+    $("pNextBtn").classList.toggle("hidden", !practice.submitted);
+    $("pNextBtn").textContent = practice.i === practice.ids.length - 1 ? "Finish" : "Next →";
+  }
+
+  function submitPractice() {
+    if (!practice || practice.submitted) return;
+    const q = QMAP[practice.ids[practice.i]];
+    const ok = C.isCorrect(practice.selected, q.correct);
+    state = C.recordAnswer(state, q.id, ok, Date.now(), true);
+    save();
+    practice.results.push({ id: q.id, ok });
+    practice.submitted = true;
+    renderPracticeQuestion();
+  }
+
+  function nextPractice() {
+    if (practice.i === practice.ids.length - 1) { finishPractice(); return; }
+    practice.i += 1;
+    practice.selected = [];
+    practice.submitted = false;
+    renderPracticeQuestion();
+    window.scrollTo(0, 0);
+  }
+
+  function finishPractice() {
+    const results = practice.results;
+    practice = null;
+    if (!results.length) { show("practiceSetup"); return; }
+    const right = results.filter((r) => r.ok).length;
+    const missed = results.filter((r) => !r.ok).map((r) => QMAP[r.id]);
+    $("summaryBody").innerHTML =
+      `<div class="score-big">${right} / ${results.length}</div><p class="muted">${C.pct(right, results.length)}% correct this session</p>` +
+      (missed.length
+        ? "<h3>Missed</h3><ul class='plain'>" + missed.map((q) => `<li><button class="linkbtn" data-single="${esc(q.id)}">Q${q.n} · ${esc(q.chapterTitle)}</button></li>`).join("") + "</ul>"
+        : "<p>No misses. Nice work.</p>");
+    show("practiceSummary");
+  }
+
+  // ---------- Shared question rendering ----------
+  function renderOptions(container, q, selected, revealed, onChange) {
+    container.innerHTML = "";
+    q.options.forEach((o) => {
+      const picked = selected.includes(o.k);
+      const locked = !revealed && C.isOptionLocked(selected, o.k, q.selectN);
+      const row = document.createElement("label");
+      row.className = "option" + (picked ? " selected" : "") + (locked ? " locked" : "");
+      if (revealed && q.correct.includes(o.k)) row.classList.add("correct");
+      else if (revealed && picked) row.classList.add("incorrect");
+      const input = document.createElement("input");
+      input.type = q.selectN > 1 ? "checkbox" : "radio";
+      input.name = "opt-" + q.id;
+      input.checked = picked;
+      input.disabled = revealed || locked;
+      input.addEventListener("change", () => onChange(C.toggleSelection(selected, o.k, q.selectN)));
+      const text = document.createElement("span");
+      text.innerHTML = `<span class="opt-key">${esc(o.k)}.</span> ${esc(o.t)}`;
+      row.append(input, text);
+      container.append(row);
+    });
+  }
+
+  function explanationHtml(q, selected) {
+    const ok = C.isCorrect(selected, q.correct);
+    const s = state.questionStats[q.id];
+    const rows = q.options.map((o) => {
+      const right = q.correct.includes(o.k);
+      const tags = (right ? '<span class="tag right">Correct</span>' : '<span class="tag wrong">Incorrect</span>') +
+        (selected.includes(o.k) ? ' <span class="tag pick">Your pick</span>' : "");
+      return `<li class="why"><div><b>${esc(o.k)}.</b> ${tags}</div><div>${esc(o.why)}</div></li>`;
+    }).join("");
+    const statsText = s ? ` · Answered ${s.attempts}× · correct ${s.correct}× (${C.pct(s.correct, s.attempts)}%)` : "";
+    return `<div class="verdict ${ok ? "right" : "wrong"}">${ok ? "Correct" : "Incorrect"}. Answer: ${esc(q.correct.join(", "))}</div>
+      <div class="explain">
+        <h4>Topic</h4><p>${esc(q.topic)}</p>
+        <h4>Answer by answer</h4><ul class="plain">${rows}</ul>
+        <h4>Why the correct answer is right</h4><p>${esc(q.correctWhy)}</p>
+        <p class="small"><a href="${esc(C.videoUrl(q))}" target="_blank" rel="noopener">Watch the explanation on YouTube ↗</a>${statsText}</p>
+      </div>`;
+  }
+
+  // ---------- Exam ----------
+  function renderExamStart() {
+    $("examInfo").textContent = `${BANK.exam.questions} questions · ${EXAM_MINUTES} minutes` + (EXAM_MINUTES !== BANK.exam.minutes ? " (test override)" : "");
+    $("examQuotaTable").innerHTML = quotaTableHtml();
+  }
+
+  function beginExam() {
+    const now = Date.now();
+    exam = {
+      ids: C.sampleExam(BANK.questions, BANK.domains, BANK.exam.questions, Math.random),
+      i: 0, answers: {}, flagged: {}, startedAt: now, deadline: now + EXAM_MINUTES * 60000, timerId: null,
+    };
+    buildNavGrid();
+    show("exam");
+    renderExamQuestion();
+    $("timerBox").classList.remove("hidden");
+    exam.timerId = setInterval(tick, 500);
+    tick();
+  }
+
+  function tick() {
+    if (!exam) return;
+    const left = C.remainingMs(exam.deadline, Date.now());
+    $("timerBox").textContent = C.formatClock(left);
+    $("timerBox").classList.toggle("low", left <= 5 * 60000);
+    if (left === 0) submitExam();
+  }
+
+  function buildNavGrid() {
+    const grid = $("navGrid");
+    grid.innerHTML = "";
+    exam.ids.forEach((id, i) => {
+      const b = document.createElement("button");
+      b.className = "nav-btn";
+      b.textContent = String(i + 1);
+      b.addEventListener("click", () => { exam.i = i; renderExamQuestion(); });
+      grid.append(b);
+    });
+  }
+
+  function renderExamQuestion() {
+    const q = QMAP[exam.ids[exam.i]];
+    $("eMeta").textContent = questionMeta(q);
+    $("eCount").textContent = `Question ${exam.i + 1} of ${exam.ids.length}`;
+    $("eStem").textContent = q.stem;
+    setHint($("eHint"), q.selectN);
+    renderOptions($("eOptions"), q, exam.answers[q.id] || [], false, (sel) => { exam.answers[q.id] = sel; renderExamQuestion(); });
+    $("flagBtn").textContent = exam.flagged[q.id] ? "Unflag" : "Flag for review";
+    $("ePrevBtn").disabled = exam.i === 0;
+    $("eNextBtn").disabled = exam.i === exam.ids.length - 1;
+    Array.from($("navGrid").children).forEach((b, i) => {
+      const id = exam.ids[i];
+      b.classList.toggle("answered", (exam.answers[id] || []).length > 0);
+      b.classList.toggle("flagged", !!exam.flagged[id]);
+      b.classList.toggle("current", i === exam.i);
+    });
+  }
+
+  function confirmSubmitExam() {
+    const unanswered = exam.ids.filter((id) => !(exam.answers[id] || []).length).length;
+    if (confirm(unanswered ? `Submit with ${unanswered} unanswered question(s)?` : "Submit the exam now?")) submitExam();
+  }
+
+  function submitExam() {
+    clearInterval(exam.timerId);
+    const questions = exam.ids.map((id) => QMAP[id]);
+    const now = Date.now();
+    const grade = C.gradeExam(questions, exam.answers);
+    state = C.recordExam(state, questions, grade, exam.startedAt, now);
+    save();
+    lastExam = { questions, answers: exam.answers, flagged: exam.flagged, grade };
+    exam = null;
+    $("timerBox").classList.add("hidden");
+    renderResults("all");
+    show("results");
+  }
+
+  function abandonExamIfConfirmed() {
+    if (!exam) return true;
+    if (!confirm("Abandon this exam? It won't be recorded.")) return false;
+    clearInterval(exam.timerId);
+    exam = null;
+    $("timerBox").classList.add("hidden");
+    return true;
+  }
+
+  function renderResults(filter) {
+    const { grade, questions, answers, flagged } = lastExam;
+    $("scoreBig").textContent = `${grade.pct}%`;
+    $("scoreSub").textContent = `${grade.correct} of ${grade.total} correct`;
+    const pass = grade.pct >= BANK.exam.passPct;
+    $("passPill").className = "pass-pill " + (pass ? "pass" : "fail");
+    $("passPill").textContent = pass ? "At or above the passing line" : "Below the passing line";
+    $("domainResults").innerHTML = "<tr><th>Domain</th><th>Score</th><th>%</th></tr>" + BANK.domains.map((d) => {
+      const s = grade.byDomain[d.id] || { correct: 0, total: 0 };
+      const p = C.pct(s.correct, s.total);
+      return `<tr><td>${d.id}. ${esc(d.name)}</td><td>${s.correct}/${s.total}</td><td>${bar(p)}${p}%</td></tr>`;
+    }).join("");
+    markChips("review", filter);
+    const shown = questions.map((q, i) => ({ q, i })).filter(({ q }) =>
+      filter === "all" || (filter === "incorrect" && !grade.results[q.id]) || (filter === "flagged" && flagged[q.id]));
+    $("reviewList").innerHTML = shown.length
+      ? shown.map(({ q, i }) => reviewItemHtml(q, i, answers[q.id] || [])).join("")
+      : "<p class='muted'>Nothing to show.</p>";
+  }
+
+  function reviewItemHtml(q, i, selected) {
+    const options = q.options.map((o) => `<div class="opt-line"><b>${esc(o.k)}.</b> ${esc(o.t)}</div>`).join("");
+    return `<div class="review-item">
+      <div class="q-header"><span class="q-meta">#${i + 1} · Q${q.n} · ${esc(q.chapterTitle)}</span><span class="q-meta">${esc(questionMeta(q))}</span></div>
+      <div class="q-text">${esc(q.stem)}</div>${options}${explanationHtml(q, selected)}</div>`;
+  }
+
+  // ---------- Statistics ----------
+  function accRow(label, b, title) {
+    const bucket = b || { attempts: 0, correct: 0, seen: 0, pct: 0 };
+    const acc = bucket.attempts ? `${bar(bucket.pct)}${bucket.pct}%` : "–";
+    return `<tr><td${title ? ` title="${esc(title)}"` : ""}>${esc(label)}</td><td>${bucket.seen}</td><td>${bucket.correct}/${bucket.attempts}</td><td>${acc}</td></tr>`;
+  }
+
+  function renderStats() {
+    const sum = C.summarize(state, BANK.questions);
+    const tiles = [
+      [sum.overall.seen, `questions attempted of ${IDS.length}`],
+      [sum.overall.attempts ? `${sum.overall.pct}%` : "–", "lifetime accuracy"],
+      [sum.overall.attempts, "answers recorded"],
+      [state.examHistory.length, "exams taken"],
+    ];
+    $("statsOverall").innerHTML = tiles.map(([n, label]) => `<div class="stat"><div class="stat-num">${n}</div><div class="small muted">${label}</div></div>`).join("");
+    const head = "<tr><th></th><th>Seen</th><th>Correct / attempts</th><th>Accuracy</th></tr>";
+    $("statsDomains").innerHTML = head + BANK.domains.map((d) => accRow(`${d.id}. ${d.name}`, sum.byDomain[d.id])).join("");
+    $("statsVideos").innerHTML = head + BANK.videos.map((v) => accRow(videoLabel(v), sum.byVideo[v.index], v.title)).join("");
+    const weak = C.weakest(state, 20);
+    $("statsWeakest").innerHTML = weak.length
+      ? "<ul class='plain'>" + weak.map((id) => {
+          const q = QMAP[id], s = state.questionStats[id];
+          return `<li class="why"><button class="linkbtn" data-single="${esc(id)}">Q${q.n} · ${esc(q.chapterTitle)}</button> <span class="small muted">${s.correct}/${s.attempts} correct</span></li>`;
+        }).join("") + "</ul>"
+      : "<p class='muted'>No missed questions yet.</p>";
+    $("statsExams").innerHTML = state.examHistory.length
+      ? "<tr><th>Date</th><th>Score</th>" + BANK.domains.map((d) => `<th>D${d.id}</th>`).join("") + "<th>Time</th></tr>" +
+        state.examHistory.slice().reverse().map((e) =>
+          `<tr><td>${new Date(e.at).toLocaleString()}</td><td>${e.scorePct}%</td>` +
+          BANK.domains.map((d) => { const s = e.byDomain[d.id]; return `<td>${s ? C.pct(s.correct, s.total) + "%" : "–"}</td>`; }).join("") +
+          `<td>${Math.round(e.durationSec / 60)} min</td></tr>`).join("")
+      : "<tr><td class='muted'>No exams yet.</td></tr>";
+  }
+
+  // ---------- Wiring ----------
+  document.addEventListener("click", (e) => {
+    const go = e.target.closest("[data-go]");
+    if (go) { if (abandonExamIfConfirmed()) { practice = null; show(go.dataset.go); } return; }
+    const single = e.target.closest("[data-single]");
+    if (single) { startPractice([single.dataset.single]); return; }
+    const filter = e.target.closest("[data-filter]");
+    if (filter) { setup.filter = filter.dataset.filter; renderPracticeSetup(); return; }
+    const size = e.target.closest("[data-size]");
+    if (size) { setup.size = size.dataset.size === "all" ? "all" : Number(size.dataset.size); renderPracticeSetup(); return; }
+    const review = e.target.closest("[data-review]");
+    if (review && lastExam) renderResults(review.dataset.review);
+  });
+  $("startPracticeBtn").addEventListener("click", () => startPractice(C.sessionIds(state, setup.filter, setup.size)));
+  $("newPassBtn").addEventListener("click", () => { state = C.newPass(state, Math.random); save(); renderPracticeSetup(); });
+  $("pSubmitBtn").addEventListener("click", submitPractice);
+  $("pNextBtn").addEventListener("click", nextPractice);
+  $("pQuitBtn").addEventListener("click", finishPractice);
+  $("beginBtn").addEventListener("click", beginExam);
+  $("flagBtn").addEventListener("click", () => { const id = exam.ids[exam.i]; exam.flagged[id] = !exam.flagged[id]; renderExamQuestion(); });
+  $("ePrevBtn").addEventListener("click", () => { exam.i -= 1; renderExamQuestion(); });
+  $("eNextBtn").addEventListener("click", () => { exam.i += 1; renderExamQuestion(); });
+  $("submitExamBtn").addEventListener("click", confirmSubmitExam);
+  $("exportBtn").addEventListener("click", exportProgress);
+  $("importInput").addEventListener("change", (e) => { if (e.target.files[0]) importProgress(e.target.files[0]); e.target.value = ""; });
+  $("resetBtn").addEventListener("click", resetProgress);
+  window.addEventListener("beforeunload", (e) => { if (exam) { e.preventDefault(); e.returnValue = ""; } });
+
+  show("home");
+})();
+</script>
+</body>
+</html>
