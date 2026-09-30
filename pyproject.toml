@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "peb"
+version = "0.1.0"
+description = "Practice exam builder: ingest study videos, build an offline practice-exam app"
+requires-python = ">=3.12"
+dependencies = ["yt-dlp==2026.8.19"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+peb = "peb.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
