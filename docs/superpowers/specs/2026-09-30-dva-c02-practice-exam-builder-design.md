@@ -320,7 +320,7 @@ are found.
   - `/*__BANK__*/` is replaced with `const BANK = {…};`, holding `bankVersion`,
     `exam` constants, `domains` (from `dva_c02.py`), `videos`, and
     `questions`.
-- In the embedded JSON, `<` is escaped as `<`, which neutralizes
+- In the embedded JSON, `<` is escaped as the JSON unicode escape (backslash, u, 003c), which neutralizes
   `</script` and `<!--`.
 - Writes `dist/dva-c02-practice.html`.
 
