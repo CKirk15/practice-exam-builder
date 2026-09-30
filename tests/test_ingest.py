@@ -105,5 +105,15 @@ def test_ingest_reports_videos_missing_from_playlist(tmp_path):
     assert [(r["videoId"], r["status"]) for r in results] == [(A, "missing"), (B, "ok")]
 
 
+def test_ingest_detects_chapter_mismatch_on_rerun_without_redownload(tmp_path):
+    client = FakeClient([A], infos={A: {"durationSec": 210, "chapters": chapters(19), "subtitles": [], "automatic_captions": ["en"]}})
+    run(tmp_path, client)
+    assert len(client.downloads) == 1
+    results = run(tmp_path, client)
+    assert results[0]["status"] == "chapter-mismatch"
+    assert "19 question chapters" in results[0]["detail"]
+    assert len(client.downloads) == 1  # No second download
+
+
 def test_failed_statuses():
     assert FAILED == {"no-captions", "chapter-mismatch", "error"}

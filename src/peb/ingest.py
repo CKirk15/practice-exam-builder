@@ -93,13 +93,22 @@ def ingest(client, url: str, sources_dir: Path, force: bool = False,
         if item["videoId"] in missing:
             results.append(_result(item, "missing", "no longer in the playlist"))
         elif (folder / "transcript.txt").exists() and not force:
-            results.append(_result(item, "ok", "skipped (already ingested)"))
+            meta = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
+            qchapters_count = len(meta.get("questionChapters", []))
+            if qchapters_count != QUESTIONS_PER_VIDEO:
+                results.append(_result(item, "chapter-mismatch", _chapter_mismatch_detail(qchapters_count)))
+            else:
+                results.append(_result(item, "ok", "skipped (already ingested)"))
         else:
             if fetched_any:
                 sleep(delay)
             fetched_any = True
             results.append(_ingest_video(client, item, folder))
     return results
+
+
+def _chapter_mismatch_detail(qchapters_count: int) -> str:
+    return f"{qchapters_count} question chapters (expected {QUESTIONS_PER_VIDEO})"
 
 
 def _ingest_video(client, item: dict, folder: Path) -> dict:
@@ -119,8 +128,7 @@ def _ingest_video(client, item: dict, folder: Path) -> dict:
     except Exception as exc:  # boundary: report per video and keep going
         return _result(item, "error", str(exc) or type(exc).__name__)
     if len(qchapters) != QUESTIONS_PER_VIDEO:
-        return _result(item, "chapter-mismatch",
-                       f"{len(qchapters)} question chapters (expected {QUESTIONS_PER_VIDEO})")
+        return _result(item, "chapter-mismatch", _chapter_mismatch_detail(len(qchapters)))
     return _result(item, "ok", f"{track[0]}{' (auto)' if track[1] else ''}")
 
 
