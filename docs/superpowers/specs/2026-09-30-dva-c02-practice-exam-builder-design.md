@@ -320,7 +320,7 @@ are found.
   - `/*__BANK__*/` is replaced with `const BANK = {…};`, holding `bankVersion`,
     `exam` constants, `domains` (from `dva_c02.py`), `videos`, and
     `questions`.
-- In the embedded JSON, `<` is escaped as `003c`, which neutralizes
+- In the embedded JSON, `<` is escaped as `<`, which neutralizes
   `</script` and `<!--`.
 - Writes `dist/dva-c02-practice.html`.
 
@@ -542,9 +542,11 @@ TDD throughout: every behavior below starts as a failing test.
 - Caption language preference.
 - Manifest pinning: first run, reorder, appended video, disappeared video.
 - Ingest summary and exit codes, with a fake `YtDlpClient`.
-- Every validation rule has a failing fixture, including the transcript
-  rules (anchor missing, timestamps non-increasing, gap too small, out of
-  range) and duplicate stems across files.
+- Every validation rule has a failing fixture, including the source
+  rules (anchor missing, anchor in the wrong chapter section, chapter
+  title/start mismatch, wrong `n`) and duplicate stems across files.
+- Chapter parsing: intro chapter detection, the `chapter-mismatch` status,
+  and section headers in `transcript.txt`.
 - Quota computation (21/17/15/12) and the domain-shortfall rule.
 - `bankVersion` is stable and changes when content changes.
 - Build: both placeholders are replaced, `<` is escaped, and the build
@@ -576,7 +578,7 @@ of each filter, and one exam with `?examMinutes=1`.
 | Delivery | One HTML with the bank embedded | Unlimited exams, one file, offline |
 | Question source | Extract real questions; no generation | The user wants to study the real set |
 | Extraction engine | Claude Code in-session | No API key needed; fixed source |
-| Extraction verification | Pilot gate + anchors + timestamp ordering + notes | Catches skipped, merged, or invented questions |
+| Extraction verification | Chapters (1 chapter = 1 question) + pilot gate + per-chapter anchors + notes | Catches skipped, merged, or invented questions |
 | Question id | `<videoId>-q<nn>` | Stable if the playlist is reordered |
 | Missing captions / count ≠ 20 | Hard failure / explicit declaration + user confirmation | No silent gaps |
 | Exam shortfall | Build fails | Avoids runtime redistribution logic |
