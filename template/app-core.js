@@ -66,9 +66,89 @@
     return selected.length === selectN;
   }
 
+  const SCHEMA_VERSION = 1;
+
+  function createState(ids, bankVersion, rng) {
+    return {
+      schemaVersion: SCHEMA_VERSION, bankVersion, queue: shuffle(ids, rng),
+      passAnswered: [], questionStats: {}, examHistory: [],
+    };
+  }
+
+  const isObject = (x) => !!x && typeof x === "object" && !Array.isArray(x);
+  const isStringArray = (x) => Array.isArray(x) && x.every((v) => typeof v === "string");
+  const isStat = (s) => isObject(s) && Number.isFinite(s.attempts) && Number.isFinite(s.correct) &&
+    typeof s.lastResult === "boolean" && Number.isFinite(s.lastAt);
+
+  function validateImport(obj) {
+    if (!isObject(obj)) return { ok: false, error: "This is not a progress file." };
+    if (obj.schemaVersion !== SCHEMA_VERSION) return { ok: false, error: "Unsupported progress file version." };
+    if (typeof obj.bankVersion !== "string") return { ok: false, error: "Progress file is missing its bank version." };
+    if (!isStringArray(obj.queue) || !isStringArray(obj.passAnswered)) {
+      return { ok: false, error: "Progress file has an invalid question queue." };
+    }
+    if (!isObject(obj.questionStats) || !Object.values(obj.questionStats).every(isStat)) {
+      return { ok: false, error: "Progress file has invalid question statistics." };
+    }
+    if (!Array.isArray(obj.examHistory) || !obj.examHistory.every(isObject)) {
+      return { ok: false, error: "Progress file has an invalid exam history." };
+    }
+    return { ok: true };
+  }
+
+  function migrateState(state, ids, bankVersion, rng) {
+    const valid = new Set(ids);
+    const kept = state.queue.filter((id) => valid.has(id));
+    const known = new Set(kept);
+    const added = shuffle(ids.filter((id) => !known.has(id)), rng);
+    const questionStats = {};
+    Object.keys(state.questionStats).forEach((id) => { if (valid.has(id)) questionStats[id] = state.questionStats[id]; });
+    return {
+      schemaVersion: SCHEMA_VERSION, bankVersion, queue: kept.concat(added),
+      passAnswered: state.passAnswered.filter((id) => valid.has(id)),
+      questionStats, examHistory: state.examHistory.slice(),
+    };
+  }
+
+  function loadState(raw, ids, bankVersion, rng) {
+    return validateImport(raw).ok ? migrateState(raw, ids, bankVersion, rng) : createState(ids, bankVersion, rng);
+  }
+
+  function filterIds(state, filter) {
+    const pass = new Set(state.passAnswered);
+    const stats = state.questionStats;
+    const keep = {
+      next: (id) => !pass.has(id),
+      never: (id) => !stats[id],
+      missed: (id) => !!stats[id] && stats[id].lastResult === false,
+    }[filter];
+    return state.queue.filter(keep);
+  }
+
+  function sessionIds(state, filter, size) {
+    const ids = filterIds(state, filter);
+    return size === "all" ? ids : ids.slice(0, size);
+  }
+
+  function recordAnswer(state, id, correct, now, countsTowardPass) {
+    const prev = state.questionStats[id] || { attempts: 0, correct: 0 };
+    const stat = { attempts: prev.attempts + 1, correct: prev.correct + (correct ? 1 : 0), lastResult: correct, lastAt: now };
+    const joinPass = countsTowardPass && !state.passAnswered.includes(id);
+    return Object.assign({}, state, {
+      questionStats: Object.assign({}, state.questionStats, { [id]: stat }),
+      passAnswered: joinPass ? state.passAnswered.concat([id]) : state.passAnswered,
+    });
+  }
+
+  function newPass(state, rng) {
+    return Object.assign({}, state, { queue: shuffle(state.queue, rng), passAnswered: [] });
+  }
+
   const api = {
     mulberry32, shuffle, examQuotas, sampleExam,
     isCorrect, toggleSelection, isOptionLocked, canSubmit,
+    SCHEMA_VERSION, createState, validateImport, migrateState, loadState,
+    filterIds, sessionIds, recordAnswer, newPass,
   };
   root.PebCore = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
