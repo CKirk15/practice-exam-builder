@@ -4,6 +4,10 @@ Turns a YouTube playlist of narrated practice questions into a single offline st
 Iteration 1 targets the DVA-C02 (AWS Certified Developer – Associate) "500 Real Exam
 Questions" playlist.
 
+This repository contains the tool only. Ingested transcripts (`sources/`) and the
+extracted question bank (`bank/`) are third-party content and are git-ignored. Run the
+pipeline below to produce them locally.
+
 ## Setup
 
 ```bash
