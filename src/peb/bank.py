@@ -172,30 +172,68 @@ def _source_problems(q: dict, pos: int, source: dict) -> list[str]:
 
 
 def _bank_problems(paths: list[Path], check_quotas: bool) -> list[Violation]:
-    problems, seen_ids, seen_stems = [], {}, {}
-    counts = {d["id"]: 0 for d in DOMAINS}
+    entries = _bank_entries(paths)
+    problems, seen_ids = [], {}
+    for e in entries:
+        if e["qid"] in seen_ids:
+            problems.append(Violation(e["file"], e["qid"], f"duplicate id (also in {seen_ids[e['qid']]})"))
+        seen_ids.setdefault(e["qid"], e["file"])
+    problems += _duplicate_problems(entries)
+    if check_quotas:
+        counts = {d["id"]: 0 for d in DOMAINS}
+        for e in entries:
+            if not e["duplicateOf"] and e["domain"] in counts:
+                counts[e["domain"]] += 1
+        for domain, quota in exam_quotas().items():
+            if counts[domain] < quota:
+                problems.append(Violation("bank", "-", f"domain {domain} has {counts[domain]} questions; "
+                                                       f"an exam needs {quota}"))
+    return problems
+
+
+def _bank_entries(paths: list[Path]) -> list[dict]:
+    entries = []
     for path in paths:
         data = _read_json(path)
         questions = data.get("questions") if isinstance(data, dict) else None
         for q in questions if isinstance(questions, list) else []:
             if not isinstance(q, dict):
                 continue
-            qid = str(q.get("id"))
-            if qid in seen_ids:
-                problems.append(Violation(path.name, qid, f"duplicate id (also in {seen_ids[qid]})"))
-            seen_ids.setdefault(qid, path.name)
-            stem = normalize(q["stem"]) if _text(q.get("stem")) else ""
-            if stem and stem in seen_stems:
-                problems.append(Violation(path.name, qid, f"duplicate stem (same as {seen_stems[stem]})"))
-            seen_stems.setdefault(stem, qid)
-            if isinstance(q.get("domain"), int) and q["domain"] in counts:
-                counts[q["domain"]] += 1
-    if check_quotas:
-        for domain, quota in exam_quotas().items():
-            if counts[domain] < quota:
-                problems.append(Violation("bank", "-", f"domain {domain} has {counts[domain]} questions; "
-                                                       f"an exam needs {quota}"))
+            n = q.get("n")
+            entries.append({"file": path.name, "qid": str(q.get("id")),
+                            "n": n if isinstance(n, int) else float("inf"),
+                            "stem": normalize(q["stem"]) if _text(q.get("stem")) else "",
+                            "duplicateOf": q.get("duplicateOf"),
+                            "domain": q.get("domain") if isinstance(q.get("domain"), int) else None})
+    return entries
+
+
+def _duplicate_problems(entries: list[dict]) -> list[Violation]:
+    earliest = {}
+    for e in entries:
+        if e["stem"] and (e["stem"] not in earliest or e["n"] < earliest[e["stem"]]["n"]):
+            earliest[e["stem"]] = e
+    by_id = {}
+    for e in entries:
+        by_id.setdefault(e["qid"], e)
+    problems = []
+    for e in entries:
+        first = earliest.get(e["stem"])
+        if e["duplicateOf"]:
+            target = by_id.get(e["duplicateOf"]) if isinstance(e["duplicateOf"], str) else None
+            if not (target and e["stem"] and target["stem"] == e["stem"] and target["n"] < e["n"]):
+                problems.append(Violation(e["file"], e["qid"],
+                                          "duplicateOf must reference an earlier question with the same stem"))
+            elif first is not target and first is not e:
+                problems.append(_duplicate_stem(e, first))
+        elif first is not None and first is not e:
+            problems.append(_duplicate_stem(e, first))
     return problems
+
+
+def _duplicate_stem(e: dict, first: dict) -> Violation:
+    return Violation(e["file"], e["qid"], f'duplicate stem (same as {first["qid"]}); '
+                                          f'mark the later one "duplicateOf": "{first["qid"]}"')
 
 
 def _load_source(folder: Path) -> dict | None:

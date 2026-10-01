@@ -34,6 +34,7 @@ def build(root: Path) -> Path:
     if problems:
         raise BuildError("bank is invalid:\n" + "\n".join(str(v) for v in problems))
     videos, questions = load_bank(root)
+    questions = [q for q in questions if not q.get("duplicateOf")]
     payload = {"bankVersion": bank_version(questions), "exam": EXAM, "domains": DOMAINS,
                "videos": videos, "questions": questions}
     template = (root / "template" / "app.html").read_text(encoding="utf-8")

@@ -58,3 +58,14 @@ def test_build_ignores_warnings_and_writes_dist_html(tmp_path):
     assert payload["exam"] == {"questions": 65, "minutes": 130, "passPct": 72}
     assert payload["videos"][0] == {"index": 1, "videoId": video_id(1), "title": "Part 1"}
     assert "Topic 1-1 – café" in html
+
+
+def test_build_excludes_marked_duplicates(tmp_path):
+    root = write_minimal_template(make_root(tmp_path))
+    q1 = f"{video_id(1)}-q01"
+    stem = json.loads((root / "bank" / f"01-{video_id(1)}.json").read_text(encoding="utf-8"))["questions"][0]["stem"]
+    rewrite(root / "bank" / f"02-{video_id(2)}.json", lambda b: b["questions"][3].update(stem=stem, duplicateOf=q1))
+    html = build(root).read_text(encoding="utf-8")
+    payload = json.loads(html.split("const BANK = ", 1)[1].rsplit(";</script>", 1)[0])
+    ids = [q["id"] for q in payload["questions"]]
+    assert len(ids) == 79 and f"{video_id(2)}-q04" not in ids and q1 in ids

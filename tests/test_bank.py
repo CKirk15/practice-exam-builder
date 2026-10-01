@@ -134,3 +134,30 @@ def test_spoken_source_still_requires_timestamp_and_anchor_window(tmp_path):
     rewrite(root / "sources" / f"01-{video_id(1)}" / "metadata.json", lambda m: m.update(questionSource="spoken"))
     rewrite(bank1(root), first(lambda q: q.update(timestampSec=5)))
     assert f"{Q1}: timestampSec must be 200" in messages(root)
+
+
+def make_duplicate(root):
+    """Video 2 q04 repeats video 1 q01's stem."""
+    stem = json.loads(bank1(root).read_text(encoding="utf-8"))["questions"][0]["stem"]
+    rewrite(root / "bank" / f"02-{video_id(2)}.json", lambda b: b["questions"][3].update(stem=stem))
+
+
+def test_duplicate_stem_hint_names_the_earliest_question(tmp_path):
+    root = make_root(tmp_path)
+    make_duplicate(root)
+    assert f'{video_id(2)}-q04: duplicate stem (same as {Q1}); mark the later one "duplicateOf": "{Q1}"' in messages(root)
+
+
+def test_duplicate_marked_with_duplicate_of_is_valid(tmp_path):
+    root = make_root(tmp_path)
+    make_duplicate(root)
+    rewrite(root / "bank" / f"02-{video_id(2)}.json", lambda b: b["questions"][3].update(duplicateOf=Q1))
+    assert errors(root) == []
+
+
+@pytest.mark.parametrize("target", ["nope-q01", f"{video_id(1)}-q02", f"{video_id(3)}-q01"])
+def test_duplicate_of_must_reference_an_earlier_question_with_the_same_stem(tmp_path, target):
+    root = make_root(tmp_path)
+    make_duplicate(root)
+    rewrite(root / "bank" / f"02-{video_id(2)}.json", lambda b: b["questions"][3].update(duplicateOf=target))
+    assert f"{video_id(2)}-q04: duplicateOf must reference an earlier question with the same stem" in messages(root)

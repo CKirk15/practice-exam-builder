@@ -86,6 +86,7 @@ Field rules:
 - **One chapter = one question.** Never merge, split, skip or pad questions to
   reach 20. If a chapter doesn't contain exactly one question, stop, leave the
   file incomplete, and report it. Don't "fix" it.
+- If the validator reports `duplicate stem` against a question in another video, the series repeated that question. Keep your faithful extraction, don't change the stem, and report the id pair. The controller adds `duplicateOf` afterwards.
 - **Never add facts** the narrator didn't say. Explanations condense; they never
   embellish.
 - **Letters.** Cross-check each option letter against the narrator's later
