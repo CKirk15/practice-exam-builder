@@ -89,3 +89,22 @@ test("validateImport rejects malformed files with a reason", () => {
     assert.equal(typeof r.error, "string");
   });
 });
+
+test("validateImport accepts a history produced by recordExam", () => {
+  const g = C.gradeExam(QS, { a: ["B"] });
+  assert.deepEqual(C.validateImport(C.recordExam(fresh(), QS, g, 10000, 70000)), { ok: true });
+});
+
+test("validateImport rejects malformed exam history entries", () => {
+  const entry = { at: 1, scorePct: 50, correct: 1, total: 2, durationSec: 60, byDomain: { 1: { correct: 1, total: 2 } } };
+  const withEntry = (patch) => Object.assign({}, fresh(), { examHistory: [Object.assign({}, entry, patch)] });
+  const { byDomain, ...noDomain } = entry;
+  const bad = [
+    withEntry({ scorePct: "<img src=x onerror=alert(1)>" }),
+    Object.assign({}, fresh(), { examHistory: [noDomain] }),
+    withEntry({ byDomain: { 1: { correct: 1 } } }),
+    withEntry({ byDomain: [] }),
+  ];
+  bad.forEach((obj) => assert.deepEqual(C.validateImport(obj), { ok: false, error: "Progress file has an invalid exam history." }));
+  assert.deepEqual(C.validateImport(withEntry({})), { ok: true });
+});

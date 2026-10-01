@@ -30,6 +30,8 @@ def test_valid_bank_has_no_violations(tmp_path):
 
 @pytest.mark.parametrize("mutate,expected", [
     (first(lambda q: q.update(domain=5)), f"{Q1}: domain must be 1-4"),
+    (first(lambda q: q.update(domain=True)), f"{Q1}: domain must be 1-4"),
+    (first(lambda q: q.update(selectN=True)), f"{Q1}: selectN must be 1 or 2"),
     (first(lambda q: q.update(task="2.1")), f"{Q1}: task '2.1' is not a task of domain 1"),
     (first(lambda q: q.update(selectN=3)), f"{Q1}: selectN must be 1 or 2"),
     (first(lambda q: q.update(correct=["B", "C"])), f"{Q1}: correct must list selectN distinct keys"),

@@ -74,6 +74,14 @@ def test_ingest_skips_already_ingested_videos_unless_forced(tmp_path):
     assert len(client.downloads) == 2
 
 
+def test_ingest_reprocesses_when_metadata_is_missing_next_to_a_transcript(tmp_path):
+    client = FakeClient([A])
+    run(tmp_path, client)
+    (tmp_path / "sources" / f"01-{A}" / "metadata.json").unlink()
+    assert run(tmp_path, client)[0]["status"] == "ok"
+    assert len(client.downloads) == 2
+
+
 def test_ingest_reports_no_captions(tmp_path):
     info = {"durationSec": 210, "chapters": chapters(20), "subtitles": [], "automatic_captions": ["fr"]}
     assert run(tmp_path, FakeClient([A], infos={A: info}))[0]["status"] == "no-captions"

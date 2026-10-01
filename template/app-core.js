@@ -80,6 +80,11 @@
   const isStat = (s) => isObject(s) && Number.isFinite(s.attempts) && Number.isFinite(s.correct) &&
     typeof s.lastResult === "boolean" && Number.isFinite(s.lastAt);
 
+  const isCount = (c) => isObject(c) && Number.isFinite(c.correct) && Number.isFinite(c.total);
+  const isExamEntry = (e) => isObject(e) &&
+    ["at", "scorePct", "correct", "total", "durationSec"].every((k) => Number.isFinite(e[k])) &&
+    isObject(e.byDomain) && Object.values(e.byDomain).every(isCount);
+
   function validateImport(obj) {
     if (!isObject(obj)) return { ok: false, error: "This is not a progress file." };
     if (obj.schemaVersion !== SCHEMA_VERSION) return { ok: false, error: "Unsupported progress file version." };
@@ -90,22 +95,24 @@
     if (!isObject(obj.questionStats) || !Object.values(obj.questionStats).every(isStat)) {
       return { ok: false, error: "Progress file has invalid question statistics." };
     }
-    if (!Array.isArray(obj.examHistory) || !obj.examHistory.every(isObject)) {
+    if (!Array.isArray(obj.examHistory) || !obj.examHistory.every(isExamEntry)) {
       return { ok: false, error: "Progress file has an invalid exam history." };
     }
     return { ok: true };
   }
 
+  const unique = (ids) => Array.from(new Set(ids));
+
   function migrateState(state, ids, bankVersion, rng) {
     const valid = new Set(ids);
-    const kept = state.queue.filter((id) => valid.has(id));
+    const kept = unique(state.queue.filter((id) => valid.has(id)));
     const known = new Set(kept);
     const added = shuffle(ids.filter((id) => !known.has(id)), rng);
     const questionStats = {};
     Object.keys(state.questionStats).forEach((id) => { if (valid.has(id)) questionStats[id] = state.questionStats[id]; });
     return {
       schemaVersion: SCHEMA_VERSION, bankVersion, queue: kept.concat(added),
-      passAnswered: state.passAnswered.filter((id) => valid.has(id)),
+      passAnswered: unique(state.passAnswered.filter((id) => valid.has(id))),
       questionStats, examHistory: state.examHistory.slice(),
     };
   }

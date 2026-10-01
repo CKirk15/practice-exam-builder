@@ -106,7 +106,10 @@ def ingest(client, url: str, sources_dir: Path, force: bool = False,
 def _already_ingested(folder: Path) -> bool:
     if not (folder / "transcript.txt").exists():
         return False
-    meta = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
+    try:
+        meta = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
     return len(meta.get("questionChapters", [])) == QUESTIONS_PER_VIDEO
 
 

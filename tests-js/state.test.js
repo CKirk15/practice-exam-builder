@@ -66,6 +66,13 @@ test("migrateState keeps surviving order and stats, drops removed ids, appends n
   assert.deepEqual(m.passAnswered, ["c"]);
 });
 
+test("migrateState de-duplicates queue and passAnswered, first occurrence wins", () => {
+  const s = Object.assign(C.createState(["a", "b"], "v1", C.mulberry32(1)), { queue: ["a", "a", "b"], passAnswered: ["b", "b", "a"] });
+  const m = C.migrateState(s, ["a", "b", "x"], "v1", C.mulberry32(1));
+  assert.deepEqual(m.queue, ["a", "b", "x"]);
+  assert.deepEqual(m.passAnswered, ["b", "a"]);
+});
+
 test("loadState starts fresh for missing, corrupted or partial stored data", () => {
   const unsupported = { schemaVersion: 2, bankVersion: "v1", queue: [], passAnswered: [], questionStats: {}, examHistory: [] };
   for (const raw of [null, undefined, "{", 42, [], {}, { schemaVersion: 1 }, unsupported]) {

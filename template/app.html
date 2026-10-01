@@ -647,9 +647,9 @@
     $("statsExams").innerHTML = state.examHistory.length
       ? "<tr><th>Date</th><th>Score</th>" + BANK.domains.map((d) => `<th>D${d.id}</th>`).join("") + "<th>Time</th></tr>" +
         state.examHistory.slice().reverse().map((e) =>
-          `<tr><td>${new Date(e.at).toLocaleString()}</td><td>${e.scorePct}%</td>` +
-          BANK.domains.map((d) => { const s = e.byDomain[d.id]; return `<td>${s ? C.pct(s.correct, s.total) + "%" : "–"}</td>`; }).join("") +
-          `<td>${Math.round(e.durationSec / 60)} min</td></tr>`).join("")
+          `<tr><td>${new Date(Number(e.at)).toLocaleString()}</td><td>${Number(e.scorePct)}%</td>` +
+          BANK.domains.map((d) => { const s = e.byDomain[d.id]; return `<td>${s ? C.pct(Number(s.correct), Number(s.total)) + "%" : "–"}</td>`; }).join("") +
+          `<td>${Math.round(Number(e.durationSec) / 60)} min</td></tr>`).join("")
       : "<tr><td class='muted'>No exams yet.</td></tr>";
   }
 

@@ -19,6 +19,7 @@ const blocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[
 const probe = ";JSON.stringify({n: BANK.questions.length, stem: BANK.questions[0].stem, title: document.title," +
   " quotas: PebCore.examQuotas(BANK.domains, BANK.exam.questions)})";
 const sandbox = { document: { title: (html.match(/<title>(.*?)<\/title>/) || [])[1] } };
+new vm.Script(blocks[2]);
 process.stdout.write(vm.runInNewContext(blocks[0] + "\n" + blocks[1] + probe, sandbox));
 """
 

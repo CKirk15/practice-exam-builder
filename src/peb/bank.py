@@ -76,7 +76,7 @@ def question_problems(q, index: int, video_id: str, pos: int, source: dict | Non
         problems.append(f"id must be {video_id}-q{pos:02d}")
     if q.get("video") != index or q.get("videoId") != video_id:
         problems.append("video/videoId do not match file")
-    if q.get("n") != n:
+    if not _is_int(q.get("n")) or q["n"] != n:
         problems.append(f"n must be {n}")
     problems += _domain_problems(q) + _option_problems(q)
     for field in ("stem", "topic", "correctWhy", "chapterTitle", "anchor"):
@@ -122,7 +122,7 @@ def _count_warning(file: str, data: dict) -> list[Violation]:
 
 def _domain_problems(q: dict) -> list[str]:
     domain, task = q.get("domain"), q.get("task")
-    if not isinstance(domain, int) or domain not in TASKS:
+    if not _is_int(domain) or domain not in TASKS:
         return ["domain must be 1-4"]
     if not isinstance(task, str) or task not in TASKS[domain]:
         return [f"task {task!r} is not a task of domain {domain}"]
@@ -141,7 +141,7 @@ def _option_problems(q: dict) -> list[str]:
         for o in options:
             if not _text(o.get("t")) or not _text(o.get("why")):
                 problems.append(f"option {o.get('k')} needs non-empty t and why")
-    if select_n not in (1, 2):
+    if not _is_int(select_n) or select_n not in (1, 2):
         problems.append("selectN must be 1 or 2")
     if not isinstance(correct, list) or len(correct) != select_n or len(set(map(str, correct))) != len(correct):
         problems.append("correct must list selectN distinct keys")
@@ -253,6 +253,10 @@ def _read_json(path: Path):
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
+
+
+def _is_int(value) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def _text(value) -> bool:
